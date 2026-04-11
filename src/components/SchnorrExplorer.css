@@ -1,0 +1,490 @@
+.schnorr-explorer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.schnorr-header {
+  margin-bottom: 2rem;
+}
+
+.schnorr-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+/* Sections */
+.schnorr-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.highlight-section {
+  background: #172033;
+}
+
+.signature-section {
+  background: #1a2332;
+  border-color: #f7931a33;
+}
+
+.verify-section {
+  background: #0f2818;
+  border-color: #16a34a33;
+}
+
+/* Inputs */
+.input-group {
+  margin-bottom: 1rem;
+}
+
+.input-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+}
+
+.schnorr-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 8px;
+  color: #e2e8f0;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.schnorr-input:focus {
+  border-color: #f7931a;
+}
+
+.schnorr-input.privkey {
+  flex: 1;
+  border-radius: 0 8px 8px 0;
+  min-width: 0;
+}
+
+.privkey-input-row {
+  display: flex;
+  align-items: center;
+}
+
+.hex-prefix {
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.1rem;
+  background: #0f172a;
+  color: #64748b;
+  border: 2px solid #334155;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+}
+
+.error-msg {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #f87171;
+}
+
+/* Tagged hash */
+.tagged-formula {
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.tagged-formula code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: #fbbf24;
+}
+
+.tagged-demo {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.tagged-step {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+}
+
+.result-step {
+  border: 1px solid #334155;
+  background: #172033;
+}
+
+.tagged-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  min-width: 6rem;
+  text-align: right;
+}
+
+.tagged-value {
+  font-size: 0.8rem;
+  color: #e2e8f0;
+  word-break: break-all;
+}
+
+.tagged-value.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+}
+
+.result-val {
+  color: #fbbf24 !important;
+}
+
+.tagged-arrow {
+  font-size: 0.78rem;
+  color: #f7931a;
+  font-weight: 600;
+  padding: 0.15rem 0;
+  text-align: center;
+}
+
+/* x-only display */
+.xonly-display {
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.xonly-value {
+  display: block;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: #60a5fa;
+  word-break: break-all;
+  line-height: 1.5;
+  margin-bottom: 0.3rem;
+}
+
+.xonly-size {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Nonce chain */
+.nonce-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.nonce-step {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+}
+
+.nonce-label {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 0.2rem;
+}
+
+.nonce-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+/* Sign chain */
+.sign-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.sign-step {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.sign-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.sign-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.sign-note {
+  font-size: 0.72rem;
+  color: #4ade80;
+  margin-top: 0.2rem;
+}
+
+/* Formula simple */
+.formula-simple {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.formula-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0.6rem;
+  background: #1e293b;
+  border-radius: 6px;
+  flex: 1;
+  min-width: 6rem;
+}
+
+.result-item {
+  background: #172033;
+  border: 1px solid #334155;
+}
+
+.formula-sym {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: #f7931a;
+  font-weight: 600;
+}
+
+.formula-txt {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  word-break: break-all;
+}
+
+.formula-op {
+  font-size: 1.2rem;
+  color: #64748b;
+  font-weight: 700;
+}
+
+/* Signature display */
+.schnorr-sig-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sig-half {
+  padding: 0.6rem 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.sig-label {
+  display: block;
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+}
+
+.sig-bytes {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.r-color { color: #60a5fa; }
+.s-color { color: #4ade80; }
+
+/* Verification */
+.verify-equation {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: #0f172a;
+  border-radius: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.eq-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.5rem 1rem;
+  background: #1e293b;
+  border-radius: 8px;
+  min-width: 10rem;
+}
+
+.eq-label {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.9rem;
+  color: #f7931a;
+  font-weight: 600;
+}
+
+.eq-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.eq-equals {
+  font-size: 1.5rem;
+  color: #4ade80;
+  font-weight: 700;
+}
+
+.verify-badge {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.verify-badge.valid {
+  background: #166534;
+  color: #4ade80;
+}
+
+.verify-badge.invalid {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+/* Comparison table */
+.comparison-table {
+  margin-top: 1rem;
+  font-size: 0.78rem;
+}
+
+.comp-header {
+  display: grid;
+  grid-template-columns: 8rem 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem;
+  border-bottom: 2px solid #334155;
+}
+
+.comp-col-label {
+  font-weight: 700;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.schnorr-col {
+  color: #f7931a;
+}
+
+.comp-row {
+  display: grid;
+  grid-template-columns: 8rem 1fr 1fr;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.comp-row:nth-child(even) {
+  background: rgba(247, 147, 26, 0.03);
+}
+
+.comp-label {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.comp-ecdsa {
+  color: #64748b;
+  text-align: center;
+}
+
+.comp-schnorr {
+  color: #4ade80;
+  text-align: center;
+}
+
+/* Shared */
+.section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-btn:hover {
+  background: #475569;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}

@@ -1,0 +1,479 @@
+.ecdsa-explorer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.ecdsa-header {
+  margin-bottom: 2rem;
+}
+
+.ecdsa-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+/* Sections */
+.ecdsa-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.highlight-section {
+  background: #172033;
+}
+
+.signature-section {
+  background: #1a2332;
+  border-color: #f7931a33;
+}
+
+.verify-section {
+  background: #0f2818;
+  border-color: #16a34a33;
+}
+
+.danger-section {
+  background: #2a1215;
+  border-color: #dc262633;
+}
+
+/* Inputs */
+.input-group {
+  margin-bottom: 1rem;
+}
+
+.input-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+}
+
+.ecdsa-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 8px;
+  color: #e2e8f0;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.ecdsa-input:focus {
+  border-color: #f7931a;
+}
+
+.ecdsa-input.privkey {
+  flex: 1;
+  border-radius: 0 8px 8px 0;
+  min-width: 0;
+}
+
+.privkey-input-row {
+  display: flex;
+  align-items: center;
+}
+
+.hex-prefix {
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.1rem;
+  background: #0f172a;
+  color: #64748b;
+  border: 2px solid #334155;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+}
+
+.error-msg {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #f87171;
+}
+
+/* Hash display */
+.hash-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.hash-row {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.hash-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  min-width: 5rem;
+  text-align: right;
+}
+
+.hash-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.msg-val { color: #e2e8f0; }
+.z-val { color: #fbbf24; }
+.hash-arrow { font-size: 0.85rem; color: #f7931a; font-weight: 600; padding: 0.15rem 0; }
+
+/* Value display */
+.value-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.val-label {
+  font-weight: 700;
+  color: #f7931a;
+  font-size: 0.85rem;
+  min-width: 2rem;
+}
+
+.val-hex {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+/* Computation chain */
+.computation-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.comp-step {
+  width: 100%;
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.comp-label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-bottom: 0.3rem;
+}
+
+.comp-coords {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.coord-label {
+  font-weight: 700;
+  color: #f7931a;
+  font-size: 0.8rem;
+  margin-right: 0.5rem;
+}
+
+.comp-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #60a5fa;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* Formula breakdown */
+.formula-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.formula-row {
+  display: grid;
+  grid-template-columns: 5rem 1fr auto;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background: #0f172a;
+  border-radius: 6px;
+  align-items: center;
+}
+
+.formula-part {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: #f7931a;
+  font-weight: 600;
+}
+
+.formula-val {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+.formula-desc {
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+.formula-divider {
+  height: 1px;
+  background: #334155;
+  margin: 0.25rem 0;
+}
+
+.result-row {
+  background: #172033;
+  border: 1px solid #334155;
+}
+
+.r-val { color: #60a5fa; }
+.s-val { color: #4ade80; }
+
+/* Signature display */
+.signature-display {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sig-part {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.sig-label {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #f7931a;
+  min-width: 1.5rem;
+}
+
+.sig-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* DER encoding */
+.der-hex {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  word-break: break-all;
+  line-height: 1.8;
+}
+
+.der-bytes {
+  margin-right: 0.3rem;
+}
+
+.der-breakdown {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.der-field {
+  display: grid;
+  grid-template-columns: 6rem 8rem 1fr;
+  gap: 0.5rem;
+  padding: 0.3rem 0.6rem;
+  background: #0f172a;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  align-items: center;
+}
+
+.der-field-bytes {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.der-field-name {
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.der-field-desc {
+  color: #64748b;
+}
+
+/* Verification */
+.verify-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.verify-step {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+}
+
+.verify-label {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: #64748b;
+  min-width: 10rem;
+}
+
+.verify-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+.verify-result {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.verify-result.valid {
+  background: #166534;
+  color: #4ade80;
+}
+
+.verify-result.invalid {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+/* Attack demo */
+.attack-demo {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.attack-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+}
+
+.attack-label {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.attack-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+.danger-val {
+  color: #f87171 !important;
+  font-weight: 600;
+}
+
+.attack-divider {
+  height: 2px;
+  background: #dc2626;
+  margin: 0.5rem 0;
+  opacity: 0.5;
+}
+
+.danger-btn {
+  background: #7f1d1d;
+  border-color: #dc2626;
+  color: #fca5a5;
+}
+
+.danger-btn:hover {
+  background: #991b1b;
+}
+
+/* Shared */
+.section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-btn:hover {
+  background: #475569;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}

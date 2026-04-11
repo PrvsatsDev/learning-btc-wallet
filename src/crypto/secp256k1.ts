@@ -36,7 +36,7 @@ export const Gy = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10
 // ─── Aritmética modular ──────────────────────────────────────
 
 /** Módulo que siempre da resultado positivo (a diferencia de %, que puede dar negativo) */
-function mod(a: bigint, m: bigint = P): bigint {
+export function mod(a: bigint, m: bigint = P): bigint {
   const result = a % m;
   return result >= 0n ? result : result + m;
 }
@@ -49,7 +49,7 @@ function mod(a: bigint, m: bigint = P): bigint {
  *
  * Esto funciona porque el campo Zp es un grupo multiplicativo de orden p-1
  */
-function modInverse(a: bigint, m: bigint = P): bigint {
+export function modInverse(a: bigint, m: bigint = P): bigint {
   return modPow(mod(a, m), m - 2n, m);
 }
 

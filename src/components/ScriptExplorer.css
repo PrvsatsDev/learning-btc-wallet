@@ -1,0 +1,361 @@
+.script-explorer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.script-header {
+  margin-bottom: 2rem;
+}
+
+.script-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Sections */
+.script-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+/* Script type selector */
+.script-type-selector {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.script-type-btn {
+  flex: 1;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.script-type-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.script-type-btn.active {
+  background: #f7931a22;
+  color: #f7931a;
+  border-color: #f7931a44;
+  font-weight: 600;
+}
+
+.script-type-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.script-type-addr {
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 0.2rem;
+  opacity: 0.7;
+}
+
+/* Script display */
+.script-code {
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  overflow-x: auto;
+}
+
+.script-line {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+}
+
+.script-opcode {
+  color: #f7931a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.script-data {
+  color: #38bdf8;
+  word-break: break-all;
+}
+
+/* Stack visualization */
+.stack-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.stack-step {
+  display: grid;
+  grid-template-columns: 2fr 3fr;
+  gap: 1rem;
+  padding: 0.6rem 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  align-items: start;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.stack-step:hover,
+.stack-step.active-step {
+  background: #1a2744;
+}
+
+.step-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.step-opcode {
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: #f7931a;
+}
+
+.step-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.step-consumed {
+  font-size: 0.7rem;
+  color: #f87171;
+}
+
+.step-produced {
+  font-size: 0.7rem;
+  color: #4ade80;
+}
+
+/* Stack items visual */
+.stack-visual {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.15rem;
+  min-height: 2rem;
+}
+
+.stack-item {
+  padding: 0.25rem 0.5rem;
+  background: #334155;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.68rem;
+  color: #cbd5e1;
+  word-break: break-all;
+  border-left: 3px solid #f7931a;
+  animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.stack-item.new-item {
+  border-left-color: #4ade80;
+  background: #0f2818;
+}
+
+.stack-empty {
+  font-size: 0.72rem;
+  color: #475569;
+  font-style: italic;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Execution controls */
+.exec-controls {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.exec-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.exec-btn:hover {
+  background: #475569;
+}
+
+.exec-btn.primary {
+  background: #f7931a33;
+  color: #f7931a;
+  border-color: #f7931a55;
+}
+
+.exec-btn.primary:hover {
+  background: #f7931a44;
+}
+
+/* Result */
+.exec-result {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+}
+
+.exec-result.success {
+  background: #16a34a22;
+  color: #4ade80;
+  border: 1px solid #16a34a44;
+}
+
+.exec-result.failure {
+  background: #dc262622;
+  color: #f87171;
+  border: 1px solid #dc262644;
+}
+
+/* Address comparison */
+.address-comparison {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.addr-row {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  align-items: center;
+}
+
+.addr-type {
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: #f7931a;
+}
+
+.addr-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+.addr-meta {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
+/* Opcode reference */
+.opcode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.opcode-card {
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+}
+
+.opcode-name {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #f7931a;
+}
+
+.opcode-hex {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-left: 0.5rem;
+}
+
+.opcode-desc {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 0.15rem;
+}
+
+/* Concepts */
+.concepts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.concept-item {
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.concept-item h4 {
+  font-size: 0.8rem;
+  color: #f7931a;
+  margin: 0 0 0.4rem;
+}
+
+.concept-item p {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}

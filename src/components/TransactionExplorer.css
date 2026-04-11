@@ -1,0 +1,391 @@
+.tx-explorer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.tx-header {
+  margin-bottom: 2rem;
+}
+
+.tx-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Sections */
+.tx-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.txid-section {
+  background: #172033;
+  border-color: #f7931a33;
+}
+
+.section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+/* Mode selector */
+.mode-selector {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.mode-btn {
+  flex: 1;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.mode-btn.active {
+  background: #f7931a22;
+  color: #f7931a;
+  border-color: #f7931a44;
+  font-weight: 600;
+}
+
+/* Example selector */
+.example-selector {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.scenario-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.scenario-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.scenario-btn.active {
+  background: #f7931a22;
+  color: #f7931a;
+  border-color: #f7931a44;
+  font-weight: 600;
+}
+
+.toggle-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-btn:hover {
+  background: #475569;
+}
+
+.active-toggle {
+  background: #e879f933;
+  color: #e879f9;
+  border-color: #e879f9;
+}
+
+/* Transaction structure */
+.tx-structure {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.struct-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+}
+
+.witness-row {
+  background: #1a0f2e;
+  border: 1px solid #e879f933;
+}
+
+.struct-label {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: #f7931a;
+}
+
+.struct-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+}
+
+.struct-sub {
+  margin-left: 1.5rem;
+  padding: 0.4rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+  border-left: 2px solid #334155;
+}
+
+.witness-sub {
+  border-left-color: #e879f9;
+}
+
+.struct-detail {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  font-size: 0.75rem;
+}
+
+.detail-label {
+  color: #64748b;
+}
+
+.detail-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #94a3b8;
+  word-break: break-all;
+  text-align: right;
+  max-width: 60%;
+}
+
+/* TxID */
+.txid-display {
+  text-align: center;
+}
+
+.txid-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  margin-bottom: 0.75rem;
+}
+
+.txid-step {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.txid-arrow {
+  font-size: 0.78rem;
+  color: #f7931a;
+  font-weight: 600;
+}
+
+.txid-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  color: #fbbf24;
+  word-break: break-all;
+  line-height: 1.5;
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+/* Hex dump */
+.hex-dump {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  line-height: 1.8;
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  word-break: break-all;
+}
+
+.hex-field {
+  cursor: pointer;
+  transition: opacity 0.2s;
+  margin-right: 0.15rem;
+}
+
+.hex-field:hover,
+.hex-field.hovered {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+/* Field tooltip — always in layout to prevent flickering */
+.field-tooltip {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  min-height: 3.5rem;
+  background: #0f172a;
+  border-radius: 8px;
+  border-left: 3px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.field-tooltip.visible {
+  opacity: 1;
+}
+
+.tooltip-name {
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.tooltip-desc {
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.tooltip-bytes {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
+/* Field legend */
+.field-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.legend-row {
+  display: grid;
+  grid-template-columns: 0.5rem 10rem 2.5rem 1fr;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 0.72rem;
+}
+
+.legend-row:hover,
+.legend-active {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.legend-color {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 2px;
+}
+
+.legend-name {
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.legend-size {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #64748b;
+  text-align: right;
+}
+
+.legend-desc {
+  color: #94a3b8;
+}
+
+/* Parse mode */
+.hex-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 2px solid #334155;
+  border-radius: 8px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.hex-textarea:focus {
+  border-color: #f7931a;
+}
+
+.parse-error {
+  color: #f87171;
+  font-size: 0.85rem;
+}
+
+/* Concepts grid */
+.concepts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.concept-item {
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.concept-item h4 {
+  font-size: 0.8rem;
+  color: #f7931a;
+  margin: 0 0 0.4rem;
+}
+
+.concept-item p {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}

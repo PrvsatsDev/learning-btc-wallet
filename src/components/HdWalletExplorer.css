@@ -1,0 +1,459 @@
+.hd-explorer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.hd-header {
+  margin-bottom: 2rem;
+}
+
+.hd-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Sections */
+.hd-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.seed-section {
+  background: #172033;
+  border-color: #f7931a33;
+}
+
+.section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+/* Mnemonic display */
+.mnemonic-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+}
+
+.mnemonic-word {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  background: #0f172a;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.word-index {
+  color: #475569;
+  font-size: 0.68rem;
+  min-width: 1.2rem;
+}
+
+.word-text {
+  color: #fbbf24;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+/* Bits visualization */
+.bits-display {
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+  margin-top: 0.75rem;
+}
+
+.bits-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.bits-label {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.bits-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.68rem;
+  color: #cbd5e1;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.bits-entropy {
+  color: #38bdf8;
+}
+
+.bits-checksum {
+  color: #f87171;
+}
+
+.bits-word-group {
+  padding: 0.1rem 0.15rem;
+  border-radius: 2px;
+  margin-right: 0.1rem;
+}
+
+.bits-word-group:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Seed hex */
+.seed-hex {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  word-break: break-all;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+  line-height: 1.5;
+}
+
+/* Purpose selector */
+.purpose-selector {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.purpose-btn {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.82rem;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.purpose-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.purpose-btn.active {
+  background: #f7931a22;
+  color: #f7931a;
+  border-color: #f7931a44;
+  font-weight: 600;
+}
+
+.purpose-label {
+  display: block;
+  font-weight: 600;
+}
+
+.purpose-sub {
+  display: block;
+  font-size: 0.7rem;
+  opacity: 0.7;
+  margin-top: 0.15rem;
+}
+
+/* Derivation tree */
+.derivation-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.tree-node {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-left: 3px solid transparent;
+}
+
+.tree-node:hover {
+  background: #1a2744;
+}
+
+.tree-node.node-active {
+  border-left-color: #f7931a;
+  background: #1a2744;
+}
+
+.tree-node.node-master {
+  border-left-color: #f7931a55;
+}
+
+.tree-node.node-hardened {
+  border-left-color: #e879f955;
+}
+
+.tree-node.node-leaf {
+  border-left-color: #4ade8055;
+}
+
+.node-indent {
+  color: #334155;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  white-space: pre;
+  user-select: none;
+}
+
+.node-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.node-path {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #f7931a;
+}
+
+.node-hardened-label {
+  color: #e879f9;
+}
+
+.node-description {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 0.1rem;
+}
+
+/* Node detail panel */
+.node-detail {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #0f172a;
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.detail-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.detail-row {
+  display: grid;
+  grid-template-columns: 8rem 1fr;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.detail-key {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.detail-val {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+.detail-val.address-val {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+/* Address list */
+.address-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.address-row {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+  align-items: center;
+}
+
+.addr-index {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #475569;
+  text-align: right;
+}
+
+.addr-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #4ade80;
+  word-break: break-all;
+}
+
+/* Controls */
+.hd-controls {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.hd-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.hd-btn:hover {
+  background: #475569;
+}
+
+.hd-btn.primary {
+  background: #f7931a33;
+  color: #f7931a;
+  border-color: #f7931a55;
+}
+
+.hd-btn.primary:hover {
+  background: #f7931a44;
+}
+
+/* Passphrase input */
+.passphrase-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.75rem;
+}
+
+.passphrase-input {
+  flex: 1;
+  padding: 0.4rem 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  outline: none;
+}
+
+.passphrase-input:focus {
+  border-color: #f7931a;
+}
+
+.passphrase-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Concepts grid */
+.concepts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.concept-item {
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.concept-item h4 {
+  font-size: 0.8rem;
+  color: #f7931a;
+  margin: 0 0 0.4rem;
+}
+
+.concept-item p {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Mnemonic text input */
+.mnemonic-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.82rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  resize: none;
+}
+
+.mnemonic-input:focus {
+  border-color: #f7931a;
+}
+
+.validation-msg {
+  font-size: 0.78rem;
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+}
+
+.validation-msg.valid {
+  color: #4ade80;
+  background: #16a34a11;
+}
+
+.validation-msg.invalid {
+  color: #f87171;
+  background: #dc262611;
+}
