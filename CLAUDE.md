@@ -22,17 +22,17 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 
 ## Hoja de ruta
 
-### Fase 1 — Fundamentos criptográficos
-- [ ] SHA-256 y RIPEMD-160 (implementación manual + explicación)
-- [ ] Curvas elípticas secp256k1
-- [ ] Clave privada → clave pública → dirección Bitcoin
+### Fase 1 — Fundamentos criptográficos ✅
+- [x] SHA-256 y RIPEMD-160 (implementación manual + explicación)
+- [x] Curvas elípticas secp256k1
+- [x] Clave privada → clave pública → dirección Bitcoin
 
-### Fase 2 — Bitcoin primitives
-- [ ] UTXO model (vs account model)
-- [ ] Estructura de una transacción
-- [ ] Scripts: P2PKH, P2WPKH, P2TR (Taproot)
-- [ ] Firmas: ECDSA y Schnorr
-- [ ] HD Wallets: BIP32 / BIP39 / BIP44 / BIP84 / BIP86
+### Fase 2 — Primitivas Bitcoin ✅
+- [x] Firmas: ECDSA (RFC 6979, DER) y Schnorr (BIP340, tagged hashes)
+- [x] UTXO model (vs account model), coin selection
+- [x] Estructura de una transacción (legacy + SegWit, serialización, TxID)
+- [x] Scripts: P2PKH, P2WPKH, P2TR (Taproot), Bech32/Bech32m
+- [x] HD Wallets: BIP32 / BIP39 / BIP44 / BIP84 / BIP86 (con SHA-512, HMAC, PBKDF2)
 
 ### Fase 3 — La wallet funcional
 - [ ] Generar e importar seed phrase (12/24 palabras)
@@ -60,13 +60,10 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 
 ## Primer paso al volver
 
-Arrancar con **Fase 1**: scaffold del proyecto (Tauri + React + TS) y primera lección:
-SHA-256 implementado a mano en TypeScript, con su visualización en la UI.
-
-Comando de inicio sugerido:
-```bash
-npm create tauri-app@latest btc-wallet -- --template react-ts
-```
+Arrancar con **Fase 3**: wallet funcional. Las primitivas ya están implementadas
+(crypto, firmas, scripts, HD wallets). Ahora toca conectar todo para crear una
+wallet que funcione de verdad: generar/importar seed, derivar direcciones,
+consultar saldo vía API, construir y firmar transacciones reales.
 
 ---
 
