@@ -1,0 +1,359 @@
+.addr-explorer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.addr-header {
+  margin-bottom: 2rem;
+}
+
+.addr-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Sections */
+.addr-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+/* Input */
+.privkey-input-row {
+  display: flex;
+  align-items: center;
+}
+
+.hex-prefix {
+  padding: 0.75rem 0.5rem 0.75rem 1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.1rem;
+  background: #0f172a;
+  color: #64748b;
+  border: 2px solid #334155;
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+}
+
+.addr-input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 0 8px 8px 0;
+  color: #e2e8f0;
+  outline: none;
+  transition: border-color 0.2s;
+  min-width: 0;
+}
+
+.addr-input.full-width {
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.addr-input:focus {
+  border-color: #f7931a;
+}
+
+.quick-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.quick-btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+/* Pipeline */
+.pipeline-section {
+  background: #172033;
+}
+
+.pipeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.pipe-step {
+  padding: 0.85rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.pipe-step.final-step {
+  border: 2px solid #f7931a44;
+  background: #1a1500;
+}
+
+.pipe-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.pipe-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: #f7931a;
+  color: #0f172a;
+  border-radius: 50%;
+}
+
+.pipe-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.pipe-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  word-break: break-all;
+  line-height: 1.5;
+  margin-bottom: 0.3rem;
+}
+
+.pipe-desc {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.privkey-color { color: #f87171; }
+.pubkey-color { color: #60a5fa; }
+.sha-color { color: #4ade80; }
+.ripemd-color { color: #c084fc; }
+.address-color { color: #f7931a; font-size: 1rem; font-weight: 600; }
+
+.pipe-arrow {
+  display: flex;
+  justify-content: center;
+  padding: 0.3rem 0;
+}
+
+.pipe-op {
+  font-size: 0.78rem;
+  color: #f7931a;
+  font-weight: 600;
+}
+
+/* Base58 anatomy */
+.base58-anatomy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.anatomy-row {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+}
+
+.anatomy-part {
+  padding: 0.6rem;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.version-part {
+  background: #3b1d0e;
+  flex: 0 0 auto;
+}
+
+.payload-part {
+  background: #1e1b3a;
+  flex: 1;
+  min-width: 0;
+}
+
+.checksum-part {
+  background: #1a3320;
+  flex: 0 0 auto;
+}
+
+.part-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  margin-bottom: 0.25rem;
+}
+
+.part-value {
+  display: block;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  color: #e2e8f0;
+  word-break: break-all;
+}
+
+.part-desc {
+  display: block;
+  font-size: 0.65rem;
+  color: #64748b;
+  margin-top: 0.2rem;
+}
+
+.anatomy-arrow {
+  font-size: 0.85rem;
+  color: #f7931a;
+  font-weight: 600;
+}
+
+.anatomy-result {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.05rem;
+  color: #f7931a;
+  font-weight: 600;
+  padding: 0.6rem 1rem;
+  background: #0f172a;
+  border-radius: 8px;
+  width: 100%;
+  text-align: center;
+  word-break: break-all;
+}
+
+/* Network comparison */
+.network-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 600px) {
+  .network-comparison {
+    grid-template-columns: 1fr;
+  }
+}
+
+.network-box {
+  padding: 0.75rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+.network-box h3 {
+  font-size: 0.85rem;
+  color: #e2e8f0;
+  margin: 0 0 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.version-badge {
+  font-size: 0.7rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.network-address {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.82rem;
+  word-break: break-all;
+  padding: 0.5rem;
+  background: #1e293b;
+  border-radius: 4px;
+  margin-bottom: 0.4rem;
+}
+
+.mainnet-color { color: #f7931a; }
+.testnet-color { color: #a78bfa; }
+
+.network-box p {
+  font-size: 0.78rem;
+  color: #64748b;
+  margin: 0;
+}
+
+/* Validation */
+.validation-result {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+}
+
+.validation-result.valid {
+  background: #052e16;
+  border: 1px solid #166534;
+  color: #4ade80;
+}
+
+.validation-result.invalid {
+  background: #2a0a0a;
+  border: 1px solid #7f1d1d;
+  color: #f87171;
+}
+
+.validation-icon {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.validation-result span:not(.validation-icon) {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+}

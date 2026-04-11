@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Sha256Explorer } from './components/Sha256Explorer';
 import { Ripemd160Explorer } from './components/Ripemd160Explorer';
+import { Secp256k1Explorer } from './components/Secp256k1Explorer';
+import { AddressExplorer } from './components/AddressExplorer';
 import './App.css';
 
-type LessonId = 'sha256' | 'ripemd160';
+type LessonId = 'sha256' | 'ripemd160' | 'secp256k1' | 'address';
 
 const lessons: { id: LessonId; label: string; component: React.FC }[] = [
   { id: 'sha256', label: 'SHA-256', component: Sha256Explorer },
   { id: 'ripemd160', label: 'RIPEMD-160', component: Ripemd160Explorer },
+  { id: 'secp256k1', label: 'secp256k1', component: Secp256k1Explorer },
+  { id: 'address', label: 'Dirección', component: AddressExplorer },
 ];
 
 function App() {

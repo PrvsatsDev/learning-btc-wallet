@@ -141,13 +141,14 @@ export interface Sha256Result {
 }
 
 /**
- * Calcula SHA-256 de un string UTF-8.
+ * Calcula SHA-256 de un string UTF-8 o de bytes crudos.
  * Devuelve el hash y todos los estados intermedios para visualización.
  */
-export function sha256(input: string): Sha256Result {
-  // Convertir string a bytes UTF-8
-  const encoder = new TextEncoder();
-  const messageBytes = encoder.encode(input);
+export function sha256(input: string | Uint8Array): Sha256Result {
+  // Convertir a bytes: si es string, usar UTF-8; si ya son bytes, usar directamente
+  const messageBytes = typeof input === 'string'
+    ? new TextEncoder().encode(input)
+    : input;
 
   // Paso 1: Padding
   const padded = padMessage(messageBytes);
@@ -224,7 +225,7 @@ export function sha256(input: string): Sha256Result {
  * Versión simple que solo devuelve el hash hex.
  * Útil para verificar contra la Web Crypto API.
  */
-export function sha256Hex(input: string): string {
+export function sha256Hex(input: string | Uint8Array): string {
   return sha256(input).hash;
 }
 

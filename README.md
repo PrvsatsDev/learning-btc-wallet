@@ -1,73 +1,56 @@
-# React + TypeScript + Vite
+# Learning BTC Wallet
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Wallet de Bitcoin didáctica construida desde cero para aprender criptografía y el protocolo Bitcoin paso a paso.
 
-Currently, two official plugins are available:
+Inspirada en [Sparrow Wallet](https://sparrowwallet.com/) y [Liana Wallet](https://wizardsardine.com/liana/).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Stack
 
-## React Compiler
+- **TypeScript + React** — frontend interactivo con tipado explícito
+- **Tauri** — runtime nativo (Rust), mucho más ligero que Electron
+- **Criptografía propia** — SHA-256, RIPEMD-160, secp256k1 y Base58 implementados desde cero, sin librerías externas
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Qué hay implementado
 
-## Expanding the ESLint configuration
+### Fase 1 — Fundamentos criptográficos
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+Cada módulo tiene su implementación desde cero y un explorador visual interactivo:
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+| Módulo | Descripción | Archivo |
+|--------|-------------|---------|
+| **SHA-256** | Padding, message schedule, 64 rondas de compresión, efecto avalancha | `src/crypto/sha256.ts` |
+| **RIPEMD-160** | Dos líneas paralelas de compresión, modo Hash160 | `src/crypto/ripemd160.ts` |
+| **secp256k1** | Curva elíptica, aritmética modular, point addition, double-and-add | `src/crypto/secp256k1.ts` |
+| **Base58Check** | Codificación de direcciones, checksum, validador | `src/crypto/base58.ts` |
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Flujo completo implementado:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+clave privada (256 bits)
+  → × G (secp256k1)
+  → clave pública
+  → SHA-256
+  → RIPEMD-160
+  → Base58Check
+  → dirección Bitcoin
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Desarrollo
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```bash
+# Instalar dependencias
+npm install
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+# Servidor de desarrollo (frontend)
+npm run dev
+
+# Aplicación nativa (requiere Rust)
+npm run tauri dev
 ```
+
+## Hoja de ruta
+
+- [x] **Fase 1** — Fundamentos criptográficos
+- [ ] **Fase 2** — Bitcoin primitives (UTXOs, transacciones, scripts, HD Wallets)
+- [ ] **Fase 3** — Wallet funcional (seed phrase, derivación, broadcast)
+- [ ] **Fase 4** — UI visual estilo Sparrow/Liana
