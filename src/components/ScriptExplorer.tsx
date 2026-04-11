@@ -7,7 +7,6 @@ import {
   disassemble,
   addressP2WPKH,
   addressP2TR,
-  OP,
   type ScriptStep,
 } from '../crypto/script';
 import { sha256 } from '../crypto/sha256';
@@ -45,7 +44,7 @@ export function ScriptExplorer() {
       const privKey = BigInt('0x' + (privKeyHex || '0'));
       if (privKey <= 0n) return null;
 
-      const pubPoint = getPublicKey(privKey);
+      const pubPoint = getPublicKey(privKey)!;
       const pubKeyHex = compressPublicKey(pubPoint);
       const pubKeyBytes = hexToBytes(pubKeyHex);
 

@@ -5,8 +5,6 @@ import {
   parseTxHex,
   exampleLegacyTx,
   exampleSegwitTx,
-  type Transaction,
-  type TxField,
 } from '../crypto/transaction';
 import './TransactionExplorer.css';
 

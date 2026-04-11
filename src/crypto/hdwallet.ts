@@ -19,7 +19,7 @@
 import { sha256 } from './sha256';
 import { ripemd160Hex } from './ripemd160';
 import { hmacSha512, bytesToHex, bigintToBytes, bytesToBigint } from './hmac';
-import { N, getPublicKey, compressPublicKey, pointAdd, scalarMultiply, G, type Point } from './secp256k1';
+import { N, getPublicKey, compressPublicKey, type Point } from './secp256k1';
 import { BIP39_WORDLIST } from './bip39-wordlist';
 import { addressP2WPKH, addressP2TR } from './script';
 

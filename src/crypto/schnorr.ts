@@ -25,7 +25,7 @@
  */
 
 import {
-  G, N, P, mod, modInverse,
+  G, N, P, mod,
   scalarMultiply, pointAdd,
   type Point,
 } from './secp256k1';

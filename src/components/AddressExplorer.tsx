@@ -74,7 +74,7 @@ export function AddressExplorer() {
             : `SegWit v${decoded.version}`;
         return { valid: true, version: decoded.version, payload: programHex, type: typeLabel, encoding: decoded.version === 0 ? 'Bech32' : 'Bech32m' };
       }
-      return { valid: false, error: 'Dirección Bech32/Bech32m inválida — checksum incorrecto o formato erróneo' };
+      return { valid: false as const, error: 'Dirección Bech32/Bech32m inválida — checksum incorrecto o formato erróneo', type: '', encoding: '' };
     }
 
     // Legacy: Base58Check
@@ -82,7 +82,7 @@ export function AddressExplorer() {
     if (result.valid) {
       return { ...result, type: result.version === 0 ? 'P2PKH' : result.version === 5 ? 'P2SH' : 'Desconocido', encoding: 'Base58Check' };
     }
-    return result;
+    return { ...result, type: '', encoding: '' };
   }, [validateInput]);
 
   return (

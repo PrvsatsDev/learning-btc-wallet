@@ -5,8 +5,8 @@ import {
   taggedHash,
 } from '../crypto/schnorr';
 import { sha256 } from '../crypto/sha256';
-import { getPublicKey, N, formatBigInt } from '../crypto/secp256k1';
-import { bytesToHex, bigintToBytes } from '../crypto/hmac';
+import { N, formatBigInt } from '../crypto/secp256k1';
+import { bytesToHex } from '../crypto/hmac';
 import { hexToBytes } from '../crypto/ecdsa';
 import './SchnorrExplorer.css';
 

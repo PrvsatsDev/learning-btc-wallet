@@ -10,7 +10,6 @@ import {
   BIP39_WORDLIST,
   type MnemonicResult,
   type DerivationStep,
-  type HDNode,
 } from '../crypto/hdwallet';
 import { bytesToHex } from '../crypto/hmac';
 import './HdWalletExplorer.css';
@@ -297,8 +296,6 @@ export function HdWalletExplorer() {
           {selectedNode !== null && derivation.steps[selectedNode] && (
             <NodeDetail
               step={derivation.steps[selectedNode]}
-              purpose={purpose}
-              node={selectedNode === 0 ? derivation.master : undefined}
             />
           )}
         </div>
@@ -381,12 +378,8 @@ export function HdWalletExplorer() {
 
 function NodeDetail({
   step,
-  purpose,
-  node,
 }: {
   step: DerivationStep;
-  purpose: Purpose;
-  node?: HDNode;
 }) {
   return (
     <div className="node-detail">

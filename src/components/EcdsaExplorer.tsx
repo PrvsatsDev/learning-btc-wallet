@@ -7,7 +7,6 @@ import {
 } from '../crypto/ecdsa';
 import { sha256 } from '../crypto/sha256';
 import { getPublicKey, N, formatBigInt } from '../crypto/secp256k1';
-import { bytesToHex, bigintToBytes } from '../crypto/hmac';
 import './EcdsaExplorer.css';
 
 function toBytes(hex: string): Uint8Array {
@@ -190,12 +189,12 @@ export function EcdsaExplorer() {
               </div>
               <div className="formula-row">
                 <span className="formula-part">r · d</span>
-                <span className="formula-val">{formatBigInt(result.sign.r * privKey, 16)}</span>
+                <span className="formula-val">{formatBigInt(result.sign.r * privKey!, 16)}</span>
                 <span className="formula-desc">r × clave privada</span>
               </div>
               <div className="formula-row">
                 <span className="formula-part">z + r·d</span>
-                <span className="formula-val">{formatBigInt(result.sign.z + result.sign.r * privKey, 16)}</span>
+                <span className="formula-val">{formatBigInt(result.sign.z + result.sign.r * privKey!, 16)}</span>
                 <span className="formula-desc">suma</span>
               </div>
               <div className="formula-row">

@@ -3,7 +3,6 @@ import {
   runScenario,
   selectCoins,
   formatSats,
-  type SimulationStep,
   type UTXO,
 } from '../crypto/utxo';
 import './UtxoExplorer.css';
@@ -153,7 +152,7 @@ export function UtxoExplorer() {
               <span className="utxo-count">({currentStep.utxos.length})</span>
             </h3>
             <div className="utxo-list">
-              {currentStep.utxos.map((utxo, i) => {
+              {currentStep.utxos.map((utxo) => {
                 const isNew = currentStep.created.some(
                   c => c.txid === utxo.txid && c.vout === utxo.vout
                 );

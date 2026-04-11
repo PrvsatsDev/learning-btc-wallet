@@ -25,7 +25,6 @@ import {
   scalarMultiply, pointAdd,
   type Point,
 } from './secp256k1';
-import { sha256 } from './sha256';
 import { hmacSha256, bigintToBytes, bytesToBigint, bytesToHex } from './hmac';
 
 // ─── Tipos ──────────────────────────────────────────────────
@@ -88,8 +87,8 @@ export function rfc6979(messageHash: Uint8Array, privateKey: bigint): bigint {
   const h1 = messageHash;
 
   // Inicializar V y K
-  let v = new Uint8Array(32).fill(0x01); // V = 0x01 0x01 ... 0x01
-  let kHmac = new Uint8Array(32).fill(0x00); // K = 0x00 0x00 ... 0x00
+  let v: Uint8Array = new Uint8Array(32).fill(0x01); // V = 0x01 0x01 ... 0x01
+  let kHmac: Uint8Array = new Uint8Array(32).fill(0x00); // K = 0x00 0x00 ... 0x00
 
   // K = HMAC_K(V || 0x00 || x || h1)
   kHmac = hmacSha256(kHmac, concat(v, [0x00], x, h1));
