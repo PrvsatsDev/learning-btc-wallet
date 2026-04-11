@@ -3,6 +3,7 @@ import { getPublicKey, compressPublicKey, uncompressPublicKey, N } from '../cryp
 import { sha256Hex } from '../crypto/sha256';
 import { ripemd160Hex } from '../crypto/ripemd160';
 import { base58CheckEncode, base58CheckValidate } from '../crypto/base58';
+import { bech32Decode } from '../crypto/script';
 import './AddressExplorer.css';
 
 function hexToBytes(hex: string): Uint8Array {
@@ -57,8 +58,31 @@ export function AddressExplorer() {
   }, [privKey]);
 
   const validation = useMemo(() => {
-    if (!validateInput.trim()) return null;
-    return base58CheckValidate(validateInput.trim());
+    const addr = validateInput.trim();
+    if (!addr) return null;
+
+    // Bech32/Bech32m: direcciones bc1... o tb1...
+    const lower = addr.toLowerCase();
+    if (lower.startsWith('bc1') || lower.startsWith('tb1')) {
+      const decoded = bech32Decode(addr);
+      if (decoded) {
+        const programHex = Array.from(decoded.program).map(b => b.toString(16).padStart(2, '0')).join('');
+        const typeLabel = decoded.version === 0
+          ? (decoded.program.length === 20 ? 'P2WPKH (SegWit v0)' : 'P2WSH (SegWit v0)')
+          : decoded.version === 1
+            ? 'P2TR (Taproot)'
+            : `SegWit v${decoded.version}`;
+        return { valid: true, version: decoded.version, payload: programHex, type: typeLabel, encoding: decoded.version === 0 ? 'Bech32' : 'Bech32m' };
+      }
+      return { valid: false, error: 'Dirección Bech32/Bech32m inválida — checksum incorrecto o formato erróneo' };
+    }
+
+    // Legacy: Base58Check
+    const result = base58CheckValidate(addr);
+    if (result.valid) {
+      return { ...result, type: result.version === 0 ? 'P2PKH' : result.version === 5 ? 'P2SH' : 'Desconocido', encoding: 'Base58Check' };
+    }
+    return result;
   }, [validateInput]);
 
   return (
@@ -246,8 +270,9 @@ export function AddressExplorer() {
             {validation.valid ? (
               <>
                 <span className="validation-icon">Válida</span>
-                <span>Versión: 0x{validation.version!.toString(16).padStart(2, '0')}</span>
-                <span>Hash160: {validation.payload}</span>
+                <span>Tipo: {validation.type} ({validation.encoding})</span>
+                <span>Versión: {validation.version}</span>
+                <span>{validation.encoding === 'Base58Check' ? 'Hash160' : 'Witness program'}: {validation.payload}</span>
               </>
             ) : (
               <>
