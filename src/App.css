@@ -1,0 +1,60 @@
+.app {
+  min-height: 100vh;
+  background: #0f172a;
+}
+
+.app-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.nav-brand {
+  font-weight: 700;
+  font-size: 1rem;
+  color: #f7931a;
+}
+
+.nav-separator {
+  color: #334155;
+}
+
+.nav-phase {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.nav-lessons {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.nav-btn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.nav-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.nav-btn.active {
+  background: #f7931a22;
+  color: #f7931a;
+  border-color: #f7931a44;
+  font-weight: 600;
+}

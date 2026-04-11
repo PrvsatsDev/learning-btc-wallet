@@ -1,0 +1,260 @@
+.sha256-explorer {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.sha256-header {
+  margin-bottom: 2rem;
+}
+
+.sha256-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a; /* Bitcoin orange */
+  margin: 0 0 0.5rem;
+}
+
+.subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Sections */
+.sha256-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.section-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Input */
+.sha256-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1.1rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0f172a;
+  border: 2px solid #334155;
+  border-radius: 8px;
+  color: #e2e8f0;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.sha256-input:focus {
+  border-color: #f7931a;
+}
+
+.input-meta {
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Hash output */
+.hash-output {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 1.05rem;
+  word-break: break-all;
+  background: #0f172a;
+  padding: 1rem;
+  border-radius: 8px;
+  color: #4ade80;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+}
+
+.hash-hint {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin: 0.5rem 0 0;
+  font-style: italic;
+}
+
+/* Padding grid */
+.padding-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.75rem;
+}
+
+.padding-byte {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 24px;
+  border-radius: 3px;
+  cursor: default;
+}
+
+.byte-message { background: #1e3a5f; color: #60a5fa; }
+.byte-separator { background: #5b2100; color: #f7931a; }
+.byte-zero { background: #1a1a2e; color: #475569; }
+.byte-length { background: #1a3320; color: #4ade80; }
+
+.padding-legend {
+  display: flex;
+  gap: 1.25rem;
+  margin-top: 0.75rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  flex-wrap: wrap;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* Toggle button */
+.toggle-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-btn:hover {
+  background: #475569;
+}
+
+/* Rounds */
+.rounds-container {
+  margin-top: 1rem;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1rem;
+}
+
+.view-toggle button {
+  padding: 0.4rem 1rem;
+  font-size: 0.8rem;
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-toggle button:first-child {
+  border-radius: 6px 0 0 6px;
+}
+
+.view-toggle button:last-child {
+  border-radius: 0 6px 6px 0;
+  border-left: none;
+}
+
+.view-toggle button.active {
+  background: #f7931a;
+  color: #0f172a;
+  border-color: #f7931a;
+  font-weight: 600;
+}
+
+.round-slider {
+  margin-bottom: 1rem;
+}
+
+.round-slider label {
+  display: block;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 0.4rem;
+}
+
+.round-slider input[type="range"] {
+  width: 100%;
+  accent-color: #f7931a;
+}
+
+/* State display */
+.state-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.5rem;
+}
+
+.state-register {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background: #0f172a;
+  border-radius: 6px;
+}
+
+.reg-name {
+  font-weight: 700;
+  color: #f7931a;
+  font-size: 0.85rem;
+  min-width: 2rem;
+}
+
+.reg-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  word-break: break-all;
+}
+
+.round-extras {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.round-extras > div {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0.6rem;
+  background: #0f172a;
+  border-radius: 6px;
+  flex: 1;
+}
