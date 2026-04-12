@@ -9,11 +9,13 @@ import { UtxoExplorer } from './components/UtxoExplorer';
 import { TransactionExplorer } from './components/TransactionExplorer';
 import { ScriptExplorer } from './components/ScriptExplorer';
 import { HdWalletExplorer } from './components/HdWalletExplorer';
+import { WalletSetup } from './components/WalletSetup';
 import './App.css';
 
 type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
-  | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet';
+  | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
+  | 'wallet-setup';
 
 interface Phase {
   id: string;
@@ -42,6 +44,13 @@ const phases: Phase[] = [
       { id: 'transaction', label: 'Transacciones', component: TransactionExplorer },
       { id: 'scripts', label: 'Script', component: ScriptExplorer },
       { id: 'hdwallet', label: 'HD Wallets', component: HdWalletExplorer },
+    ],
+  },
+  {
+    id: 'phase3',
+    label: 'Fase 3: Wallet',
+    lessons: [
+      { id: 'wallet-setup', label: 'Seed Manager', component: WalletSetup },
     ],
   },
 ];

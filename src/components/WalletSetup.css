@@ -1,0 +1,479 @@
+/* WalletSetup — Fase 3 */
+
+.wallet-setup {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.wallet-header {
+  margin-bottom: 1.5rem;
+}
+
+.wallet-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+.wallet-header .subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Progress breadcrumb */
+.wallet-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  padding: 0.75rem 1rem;
+  background: #1e293b;
+  border-radius: 8px;
+  border: 1px solid #334155;
+}
+
+.progress-step {
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.progress-step.active {
+  color: #f7931a;
+}
+
+.progress-step.done {
+  color: #4ade80;
+}
+
+.progress-arrow {
+  color: #334155;
+  font-size: 0.8rem;
+}
+
+/* Sections — reutilizamos el estilo de las fases anteriores */
+.wallet-section {
+  margin-bottom: 2rem;
+  padding: 1.25rem;
+  background: #1e293b;
+  border-radius: 12px;
+  border: 1px solid #334155;
+}
+
+.wallet-active-section {
+  border-color: #4ade8044;
+  background: #172033;
+}
+
+.next-steps-section {
+  border-color: #f7931a33;
+  border-style: dashed;
+}
+
+.section-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #f7931a;
+  margin-bottom: 0.75rem;
+}
+
+.section-description {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.section-description code {
+  color: #fbbf24;
+  background: #0f172a;
+  padding: 0.15rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.8rem;
+}
+
+/* Choice cards */
+.choice-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.choice-card {
+  padding: 1.25rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.choice-card:hover {
+  border-color: #f7931a55;
+  background: #172033;
+}
+
+.choice-icon {
+  font-size: 1.5rem;
+  color: #f7931a;
+  margin-bottom: 0.5rem;
+}
+
+.choice-card h3 {
+  font-size: 0.95rem;
+  color: #e2e8f0;
+  margin: 0 0 0.5rem;
+}
+
+.choice-card p {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin: 0;
+}
+
+/* Word count selector */
+.word-count-selector {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+}
+
+.wc-btn {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.wc-btn:hover {
+  background: #334155;
+}
+
+.wc-btn.active {
+  background: #f7931a22;
+  color: #f7931a;
+  border-color: #f7931a44;
+  font-weight: 600;
+}
+
+/* Warning box */
+.warning-box {
+  padding: 0.75rem 1rem;
+  background: #f7931a11;
+  border: 1px solid #f7931a33;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: #fbbf24;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.warning-box strong {
+  color: #f7931a;
+}
+
+/* Mnemonic display */
+.mnemonic-display {
+  margin-bottom: 1rem;
+}
+
+.mnemonic-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.35rem;
+}
+
+.mnemonic-word {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.6rem;
+  background: #0f172a;
+  border-radius: 6px;
+  font-size: 0.8rem;
+}
+
+.word-index {
+  color: #475569;
+  font-size: 0.68rem;
+  min-width: 1.5rem;
+}
+
+.word-text {
+  color: #fbbf24;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.mnemonic-hidden {
+  padding: 2rem;
+  text-align: center;
+  color: #475569;
+  font-size: 0.85rem;
+  background: #0f172a;
+  border-radius: 8px;
+}
+
+/* Controls */
+.wallet-controls {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+.wallet-btn {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.wallet-btn:hover {
+  background: #475569;
+}
+
+.wallet-btn.primary {
+  background: #f7931a33;
+  color: #f7931a;
+  border-color: #f7931a55;
+  font-weight: 600;
+}
+
+.wallet-btn.primary:hover {
+  background: #f7931a44;
+}
+
+.wallet-btn.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.back-btn {
+  background: transparent;
+  border-color: #334155;
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
+.back-btn:hover {
+  color: #94a3b8;
+}
+
+/* Passphrase */
+.passphrase-section {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.passphrase-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.passphrase-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.4rem 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  outline: none;
+}
+
+.passphrase-input:focus {
+  border-color: #f7931a;
+}
+
+.passphrase-hint {
+  width: 100%;
+  font-size: 0.72rem;
+  color: #f7931a99;
+  margin: 0.25rem 0 0;
+}
+
+/* Backup confirmation */
+.backup-confirm {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #0f172a;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  cursor: pointer;
+  user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+  accent-color: #f7931a;
+  width: 1rem;
+  height: 1rem;
+}
+
+/* Import */
+.mnemonic-input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.82rem;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  outline: none;
+  box-sizing: border-box;
+  resize: none;
+}
+
+.mnemonic-input:focus {
+  border-color: #f7931a;
+}
+
+.validation-msg {
+  font-size: 0.78rem;
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+}
+
+.validation-msg.valid {
+  color: #4ade80;
+  background: #16a34a11;
+}
+
+.validation-msg.invalid {
+  color: #f87171;
+  background: #dc262611;
+}
+
+.import-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.import-error {
+  font-size: 0.78rem;
+  color: #f87171;
+}
+
+/* Word suggestions */
+.word-suggestions {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.suggestion-btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  background: #0f172a;
+  color: #38bdf8;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.suggestion-btn:hover {
+  background: #1e293b;
+  border-color: #38bdf8;
+}
+
+/* Seed display */
+.seed-details {
+  margin-top: 0.5rem;
+}
+
+.seed-summary {
+  font-size: 0.78rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 0.3rem 0;
+  user-select: none;
+}
+
+.seed-summary:hover {
+  color: #94a3b8;
+}
+
+.seed-hex {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  word-break: break-all;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
+
+/* Address list */
+.address-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.address-row {
+  display: grid;
+  grid-template-columns: 11rem 1fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #0f172a;
+  border-radius: 6px;
+  align-items: center;
+}
+
+.addr-path {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.68rem;
+  color: #475569;
+}
+
+.addr-value {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.72rem;
+  color: #4ade80;
+  word-break: break-all;
+}
