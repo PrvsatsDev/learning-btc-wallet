@@ -10,12 +10,13 @@ import { TransactionExplorer } from './components/TransactionExplorer';
 import { ScriptExplorer } from './components/ScriptExplorer';
 import { HdWalletExplorer } from './components/HdWalletExplorer';
 import { WalletSetup } from './components/WalletSetup';
+import { BalanceChecker } from './components/BalanceChecker';
 import './App.css';
 
 type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
   | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
-  | 'wallet-setup';
+  | 'wallet-setup' | 'balance';
 
 interface Phase {
   id: string;
@@ -51,6 +52,7 @@ const phases: Phase[] = [
     label: 'Fase 3: Wallet',
     lessons: [
       { id: 'wallet-setup', label: 'Seed Manager', component: WalletSetup },
+      { id: 'balance', label: 'Balance', component: BalanceChecker },
     ],
   },
 ];
