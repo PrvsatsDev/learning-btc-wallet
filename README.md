@@ -63,6 +63,16 @@ npm run dev
 npm run tauri dev
 ```
 
+### Fase 3 — Wallet funcional (en progreso)
+
+| Módulo | Descripción | Archivos |
+|--------|-------------|----------|
+| **Seed Manager** | Generar/importar mnemónico 12/24 palabras, backup, derivar direcciones | `src/components/WalletSetup.tsx` |
+| **Balance Checker** | Consulta de UTXOs y saldo vía API mempool.space | `src/components/BalanceChecker.tsx`, `src/api/mempool.ts` |
+| **Transaction Builder** | Selección de UTXOs, construcción de tx sin firmar, cálculo de fees | `src/components/TxBuilder.tsx` |
+
+Pendiente: firma de transacciones y broadcast a la red.
+
 ## Hoja de ruta
 
 - [x] **Fase 1** — Fundamentos criptográficos (SHA-256, RIPEMD-160, secp256k1, Base58Check)

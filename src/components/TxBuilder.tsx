@@ -35,7 +35,7 @@ import {
 import {
   getAddressUtxos,
   formatSats,
-  satsToBtc,
+
   type Network,
   type UTXO as ApiUTXO,
 } from '../api/mempool';
@@ -132,7 +132,7 @@ export function TxBuilder() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amountInput, setAmountInput] = useState('');
   const [feeRate, setFeeRate] = useState(2); // sat/vB
-  const [changeIndex, setChangeIndex] = useState(0); // dirección de cambio
+  const [changeIndex] = useState(0); // dirección de cambio
 
   // Resultado
   const [builtTx, setBuiltTx] = useState<{

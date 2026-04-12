@@ -130,7 +130,7 @@ export function WalletSetup() {
 
       {/* Breadcrumb de progreso */}
       <div className="wallet-progress">
-        <span className={`progress-step ${step === 'choose' ? 'active' : step !== 'choose' ? 'done' : ''}`}>
+        <span className={`progress-step ${step === 'choose' ? 'active' : 'done'}`}>
           1. Elegir
         </span>
         <span className="progress-arrow">&rarr;</span>
