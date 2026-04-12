@@ -57,15 +57,25 @@ const phases: Phase[] = [
 
 function App() {
   const [activeLesson, setActiveLesson] = useState<LessonId>('sha256');
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const allLessons = phases.flatMap(p => p.lessons);
   const ActiveComponent = allLessons.find(l => l.id === activeLesson)!.component;
+  const activeLessonLabel = allLessons.find(l => l.id === activeLesson)!.label;
 
   return (
     <div className="app">
       <nav className="app-nav">
         <span className="nav-brand">BTC Wallet</span>
-        <div className="nav-phases">
+        <span className="nav-current-label">{activeLessonLabel}</span>
+        <button
+          className="nav-hamburger"
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Menú"
+        >
+          <span className={`hamburger-icon ${menuOpen ? 'open' : ''}`} />
+        </button>
+        <div className={`nav-phases ${menuOpen ? 'nav-phases--open' : ''}`}>
           {phases.map((phase) => (
             <div key={phase.id} className="nav-phase-group">
               <span className="nav-phase">{phase.label}</span>
@@ -74,7 +84,10 @@ function App() {
                   <button
                     key={lesson.id}
                     className={`nav-btn ${activeLesson === lesson.id ? 'active' : ''}`}
-                    onClick={() => setActiveLesson(lesson.id)}
+                    onClick={() => {
+                      setActiveLesson(lesson.id);
+                      setMenuOpen(false);
+                    }}
                   >
                     {lesson.label}
                   </button>

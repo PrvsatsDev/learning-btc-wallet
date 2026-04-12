@@ -3,6 +3,8 @@
   background: #0f172a;
 }
 
+/* ─── Navegación ──────────────────────────────────────── */
+
 .app-nav {
   display: flex;
   align-items: center;
@@ -20,6 +22,16 @@
   font-weight: 700;
   font-size: 1rem;
   color: #f7931a;
+}
+
+/* Label de la lección activa — solo visible en móvil */
+.nav-current-label {
+  display: none;
+}
+
+/* Hamburguesa — solo visible en móvil */
+.nav-hamburger {
+  display: none;
 }
 
 .nav-phases {
@@ -75,4 +87,128 @@
   color: #f7931a;
   border-color: #f7931a44;
   font-weight: 600;
+}
+
+/* ─── Responsive: móvil ──────────────────────────────── */
+
+@media (max-width: 768px) {
+  .app-nav {
+    flex-wrap: nowrap;
+    padding: 0.6rem 1rem;
+  }
+
+  .nav-current-label {
+    display: block;
+    font-size: 0.8rem;
+    color: #94a3b8;
+    margin-left: auto;
+    margin-right: 0.5rem;
+  }
+
+  /* Hamburguesa */
+  .nav-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    background: transparent;
+    border: 1px solid #334155;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .hamburger-icon {
+    position: relative;
+    width: 14px;
+    height: 2px;
+    background: #94a3b8;
+    border-radius: 1px;
+    transition: all 0.2s;
+  }
+
+  .hamburger-icon::before,
+  .hamburger-icon::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    width: 14px;
+    height: 2px;
+    background: #94a3b8;
+    border-radius: 1px;
+    transition: all 0.2s;
+  }
+
+  .hamburger-icon::before {
+    top: -5px;
+  }
+
+  .hamburger-icon::after {
+    top: 5px;
+  }
+
+  /* Hamburguesa abierta: X */
+  .hamburger-icon.open {
+    background: transparent;
+  }
+
+  .hamburger-icon.open::before {
+    top: 0;
+    transform: rotate(45deg);
+    background: #f7931a;
+  }
+
+  .hamburger-icon.open::after {
+    top: 0;
+    transform: rotate(-45deg);
+    background: #f7931a;
+  }
+
+  /* Panel de navegación colapsable */
+  .nav-phases {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-left: 0;
+    padding-top: 0.75rem;
+    border-top: 1px solid #334155;
+    margin-top: 0.5rem;
+  }
+
+  .nav-phases--open {
+    display: flex;
+  }
+
+  .nav-phase-group {
+    flex-direction: column;
+    align-items: stretch;
+    padding-left: 0;
+    border-left: none;
+    border-bottom: 1px solid #1e293b;
+    padding-bottom: 0.5rem;
+  }
+
+  .nav-phase-group:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .nav-phase {
+    font-size: 0.72rem;
+    padding: 0.3rem 0;
+    color: #64748b;
+  }
+
+  .nav-lessons {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+
+  .nav-btn {
+    padding: 0.4rem 0.7rem;
+    font-size: 0.78rem;
+  }
 }
