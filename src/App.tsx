@@ -11,12 +11,13 @@ import { ScriptExplorer } from './components/ScriptExplorer';
 import { HdWalletExplorer } from './components/HdWalletExplorer';
 import { WalletSetup } from './components/WalletSetup';
 import { BalanceChecker } from './components/BalanceChecker';
+import { TxBuilder } from './components/TxBuilder';
 import './App.css';
 
 type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
   | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
-  | 'wallet-setup' | 'balance';
+  | 'wallet-setup' | 'balance' | 'tx-builder';
 
 interface Phase {
   id: string;
@@ -53,6 +54,7 @@ const phases: Phase[] = [
     lessons: [
       { id: 'wallet-setup', label: 'Seed Manager', component: WalletSetup },
       { id: 'balance', label: 'Balance', component: BalanceChecker },
+      { id: 'tx-builder', label: 'Transacción', component: TxBuilder },
     ],
   },
 ];
