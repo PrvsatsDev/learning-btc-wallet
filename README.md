@@ -63,15 +63,23 @@ npm run dev
 npm run tauri dev
 ```
 
-### Fase 3 — Wallet funcional (en progreso)
+### Fase 3 — Wallet funcional
 
 | Módulo | Descripción | Archivos |
 |--------|-------------|----------|
 | **Seed Manager** | Generar/importar mnemónico 12/24 palabras, backup, derivar direcciones | `src/components/WalletSetup.tsx` |
 | **Balance Checker** | Consulta de UTXOs y saldo vía API mempool.space | `src/components/BalanceChecker.tsx`, `src/api/mempool.ts` |
-| **Transaction Builder** | Selección de UTXOs, construcción de tx sin firmar, cálculo de fees | `src/components/TxBuilder.tsx` |
+| **Transaction Builder** | Selección de UTXOs, construcción de tx, firma BIP143 + ECDSA, broadcast | `src/components/TxBuilder.tsx`, `src/crypto/sighash.ts` |
 
-Pendiente: firma de transacciones y broadcast a la red.
+El Transaction Builder cubre el flujo completo end-to-end:
+
+1. **Inputs** — carga UTXOs de la wallet vía API, selección manual o automática (largest-first).
+2. **Outputs** — dirección destino (bech32/bech32m) + cambio con dust limit.
+3. **Fee** — estimación en vB con fee rate ajustable.
+4. **Firma BIP143** — cálculo del preimage SegWit v0 paso a paso (hashPrevouts, hashSequence, scriptCode P2WPKH, amount, hashOutputs) y firma ECDSA (RFC 6979, low-s, DER) con visualización del preimage anotado.
+5. **Broadcast** — POST del hex firmado al endpoint `/tx` de mempool.space; enlace al explorador para ver la tx resultante.
+
+Sanity check del sighash cross-verificado con Python/Node crypto: `src/crypto/sighash.test.ts`.
 
 ## Hoja de ruta
 

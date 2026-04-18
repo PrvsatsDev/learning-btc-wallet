@@ -35,16 +35,22 @@ import {
 import {
   getAddressUtxos,
   formatSats,
-
+  broadcastTx,
   type Network,
   type UTXO as ApiUTXO,
 } from '../api/mempool';
 import { createP2WPKH } from '../crypto/script';
 import { bech32Decode } from '../crypto/script';
-import { serializeWitness, type Transaction, type TxField } from '../crypto/transaction';
+import {
+  serializeLegacy,
+  serializeWitness,
+  type Transaction,
+  type TxField,
+} from '../crypto/transaction';
 import { compressPublicKey } from '../crypto/secp256k1';
 import { sha256 } from '../crypto/sha256';
 import { ripemd160Hex } from '../crypto/ripemd160';
+import { signP2WPKHInput, type SignP2WPKHResult } from '../crypto/sighash';
 import './TxBuilder.css';
 
 // ─── Tipos ──────────────────────────────────────────────
@@ -134,7 +140,7 @@ export function TxBuilder() {
   const [feeRate, setFeeRate] = useState(2); // sat/vB
   const [changeIndex] = useState(0); // dirección de cambio
 
-  // Resultado
+  // Resultado: transacción construida (sin firmar)
   const [builtTx, setBuiltTx] = useState<{
     tx: Transaction;
     hex: string;
@@ -143,6 +149,24 @@ export function TxBuilder() {
     fee: number;
     changeAmount: number;
   } | null>(null);
+
+  // Resultado: transacción firmada
+  const [signedTx, setSignedTx] = useState<{
+    tx: Transaction;
+    hex: string;
+    fields: TxField[];
+    vsize: number;       // tamaño virtual real (BIP141 weight/4)
+    totalSize: number;   // bytes totales (con witness)
+    legacySize: number;  // bytes sin witness (lo que cuenta 4x)
+    signatures: SignP2WPKHResult[]; // una por input, para visualizar
+  } | null>(null);
+  const [signing, setSigning] = useState(false);
+  const [signError, setSignError] = useState<string | null>(null);
+
+  // Resultado: broadcast
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [broadcastTxid, setBroadcastTxid] = useState<string | null>(null);
+  const [broadcastError, setBroadcastError] = useState<string | null>(null);
 
   // ─── Cargar UTXOs de la wallet ──────────────────────────
 
@@ -158,6 +182,10 @@ export function TxBuilder() {
     setWalletUtxos([]);
     setSelectedUtxos(new Set());
     setBuiltTx(null);
+    setSignedTx(null);
+    setBroadcastTxid(null);
+    setBroadcastError(null);
+    setSignError(null);
 
     try {
       const seed = mnemonicToSeed(words, passphrase);
@@ -260,6 +288,12 @@ export function TxBuilder() {
   // ─── Construir transacción ──────────────────────────────
 
   const buildTransaction = useCallback(() => {
+    // Resetear estados derivados de un build anterior
+    setSignedTx(null);
+    setSignError(null);
+    setBroadcastTxid(null);
+    setBroadcastError(null);
+
     // Validar dirección del destinatario
     const recipientScript = addressToScriptPubKey(recipientAddress.trim());
     if (!recipientScript) {
@@ -329,6 +363,110 @@ export function TxBuilder() {
     });
   }, [selected, recipientAddress, amountSats, changeAmount, estimatedSize, estimatedFee, mnemonicInput, passphrase, changeIndex]);
 
+  // ─── Firmar transacción (BIP143 + ECDSA) ────────────────
+
+  const signBuiltTransaction = useCallback(() => {
+    if (!builtTx) return;
+
+    setSigning(true);
+    setSignError(null);
+
+    try {
+      // Re-derivamos claves privadas a partir del mnemónico + path de cada UTXO.
+      // No guardamos las privkeys en estado — sólo existen durante la firma.
+      const words = mnemonicInput.trim().split(/\s+/);
+      const seed = mnemonicToSeed(words, passphrase);
+      const master = masterKeyFromSeed(seed);
+
+      // Copia profunda de la tx construida — mutamos los witnesses con firmas reales
+      const txToSign: Transaction = {
+        ...builtTx.tx,
+        inputs: builtTx.tx.inputs.map(i => ({ ...i })),
+        outputs: builtTx.tx.outputs.map(o => ({ ...o })),
+        witnesses: [],
+      };
+
+      const signatures: SignP2WPKHResult[] = [];
+      const witnesses: Uint8Array[][] = [];
+
+      // Un input → una firma. El sighash precalcula hashPrevouts/Sequence/Outputs
+      // UNA vez por input (trivialmente caché-able para N inputs, BIP143 así lo premia).
+      for (let i = 0; i < selected.length; i++) {
+        const utxo = selected[i];
+        const { node } = derivePath(master, utxo.path);
+        const privateKey = node.privateKey;
+        const compressedPubKeyHex = compressPublicKey(node.publicKey);
+        const compressedPubKey = hexToBytes(compressedPubKeyHex);
+        const pubKeyHash = pubKeyHashFromCompressedKey(compressedPubKeyHex);
+
+        const result = signP2WPKHInput(
+          txToSign,
+          i,
+          privateKey,
+          compressedPubKey,
+          pubKeyHash,
+          BigInt(utxo.value),
+        );
+
+        signatures.push(result);
+        witnesses.push(result.witness);
+      }
+
+      txToSign.witnesses = witnesses;
+
+      // Serializar la tx firmada y calcular vsize real (BIP141)
+      //   weight = base_size * 3 + total_size
+      //   vsize  = ceil(weight / 4)
+      const legacy = serializeLegacy(txToSign);
+      const segwit = serializeWitness(txToSign);
+      const weight = legacy.size * 3 + segwit.size;
+      const vsize = Math.ceil(weight / 4);
+
+      setSignedTx({
+        tx: txToSign,
+        hex: segwit.hex,
+        fields: segwit.fields,
+        vsize,
+        totalSize: segwit.size,
+        legacySize: legacy.size,
+        signatures,
+      });
+    } catch (e) {
+      setSignError(e instanceof Error ? e.message : 'Error al firmar la transacción');
+    } finally {
+      setSigning(false);
+    }
+  }, [builtTx, selected, mnemonicInput, passphrase]);
+
+  // ─── Broadcast (POST a mempool.space) ──────────────────
+
+  const broadcastSignedTransaction = useCallback(async () => {
+    if (!signedTx) return;
+
+    // Aviso extra si es mainnet — aquí sí es dinero real
+    if (network === 'mainnet') {
+      const ok = window.confirm(
+        'Estás a punto de emitir una transacción en MAINNET — los BTC son reales.\n\n' +
+        '¿Seguro que quieres continuar?'
+      );
+      if (!ok) return;
+    }
+
+    setBroadcasting(true);
+    setBroadcastError(null);
+    setBroadcastTxid(null);
+
+    try {
+      const txid = await broadcastTx(signedTx.hex, network);
+      // La API devuelve el txid como texto plano, a veces con espacios/saltos
+      setBroadcastTxid(txid.trim());
+    } catch (e) {
+      setBroadcastError(e instanceof Error ? e.message : 'Error al hacer broadcast');
+    } finally {
+      setBroadcasting(false);
+    }
+  }, [signedTx, network]);
+
   // ─── Generar mnemónico de prueba ───────────────────────
 
   const handleGenerateTest = useCallback(() => {
@@ -344,8 +482,8 @@ export function TxBuilder() {
         <h1>Transaction Builder</h1>
         <p className="subtitle">
           Construye una transacción Bitcoin paso a paso: selecciona UTXOs,
-          define el destinatario, calcula la fee, y genera la transacción
-          sin firmar. La firma viene en el siguiente paso.
+          define el destinatario, calcula la fee, firma cada input con
+          BIP143 + ECDSA y emítela a la red.
         </p>
       </div>
 
@@ -357,7 +495,7 @@ export function TxBuilder() {
             <button
               key={n}
               className={`network-btn ${network === n ? 'active' : ''} ${n === 'mainnet' ? 'mainnet-btn' : ''}`}
-              onClick={() => { setNetwork(n); setWalletUtxos([]); setBuiltTx(null); }}
+              onClick={() => { setNetwork(n); setWalletUtxos([]); setBuiltTx(null); setSignedTx(null); setBroadcastTxid(null); setBroadcastError(null); setSignError(null); }}
             >
               {n === 'testnet4' ? 'Testnet4' : n === 'signet' ? 'Signet' : 'Mainnet'}
             </button>
@@ -431,6 +569,10 @@ export function TxBuilder() {
                       if (isSelected) next.delete(key); else next.add(key);
                       setSelectedUtxos(next);
                       setBuiltTx(null);
+                      setSignedTx(null);
+                      setBroadcastTxid(null);
+                      setBroadcastError(null);
+                      setSignError(null);
                     }}
                   />
                   <div className="utxo-select-info">
@@ -473,7 +615,7 @@ export function TxBuilder() {
               className="address-input"
               type="text"
               value={recipientAddress}
-              onChange={e => { setRecipientAddress(e.target.value); setBuiltTx(null); }}
+              onChange={e => { setRecipientAddress(e.target.value); setBuiltTx(null); setSignedTx(null); setBroadcastTxid(null); setBroadcastError(null); setSignError(null); }}
               placeholder={network === 'mainnet' ? 'bc1q...' : 'tb1q...'}
             />
           </div>
@@ -485,7 +627,7 @@ export function TxBuilder() {
                 className="amount-input"
                 type="text"
                 value={amountInput}
-                onChange={e => { setAmountInput(e.target.value); setBuiltTx(null); }}
+                onChange={e => { setAmountInput(e.target.value); setBuiltTx(null); setSignedTx(null); setBroadcastTxid(null); setBroadcastError(null); setSignError(null); }}
                 placeholder="0.001"
               />
               {amountSats > 0 && (
@@ -500,7 +642,7 @@ export function TxBuilder() {
                 type="number"
                 min={1}
                 value={feeRate}
-                onChange={e => { setFeeRate(Math.max(1, parseInt(e.target.value) || 1)); setBuiltTx(null); }}
+                onChange={e => { setFeeRate(Math.max(1, parseInt(e.target.value) || 1)); setBuiltTx(null); setSignedTx(null); setBroadcastTxid(null); setBroadcastError(null); setSignError(null); }}
               />
             </div>
           </div>
@@ -610,9 +752,193 @@ export function TxBuilder() {
 
           <div className="next-step-hint">
             La transacción está construida pero <strong>no firmada</strong>.
-            Sin firma, la red la rechazaría. El siguiente paso es firmar
-            cada input con ECDSA (P2WPKH) y emitirla a la red.
+            Sin firma, la red la rechazaría. Pulsa <strong>Firmar</strong> abajo
+            para calcular el sighash BIP143 de cada input y generar la firma ECDSA.
           </div>
+
+          <button
+            className="txb-btn primary build-btn"
+            style={{ marginTop: '1rem' }}
+            onClick={signBuiltTransaction}
+            disabled={signing}
+          >
+            {signing ? 'Firmando...' : 'Firmar transacción'}
+          </button>
+
+          {signError && <div className="txb-error" style={{ marginTop: '0.75rem' }}>{signError}</div>}
+        </div>
+      )}
+
+      {/* Paso 5: Firmas BIP143 + tx firmada */}
+      {signedTx && (
+        <div className="txb-section result-section">
+          <span className="section-label">4. Firmar (BIP143 + ECDSA)</span>
+          <p className="section-description">
+            Para cada input calculamos el <strong>sighash BIP143</strong>: un
+            preimage de 10 campos que compromete la versión, todos los prevouts,
+            secuencias y outputs, más el <em>outpoint</em>, <em>scriptCode</em> y{' '}
+            <em>amount</em> del input concreto. Ese preimage se hashea dos veces
+            con SHA-256 y ese es el hash que firmamos con ECDSA.
+          </p>
+
+          <div className="tx-stats">
+            <div className="stat">
+              <span className="stat-label">Tamaño real</span>
+              <span className="stat-value">{signedTx.vsize} vB</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Total bytes</span>
+              <span className="stat-value">{signedTx.totalSize} B</span>
+            </div>
+            <div className="stat">
+              <span className="stat-label">Inputs firmados</span>
+              <span className="stat-value">{signedTx.signatures.length}</span>
+            </div>
+          </div>
+
+          {/* Por cada input, mostrar preimage + sighash + firma */}
+          {signedTx.signatures.map((sig, i) => (
+            <div key={i} className="tx-hex-annotated" style={{ marginTop: '1rem' }}>
+              <span className="section-label" style={{ marginBottom: '0.5rem' }}>
+                Input #{i} — preimage BIP143 ({sig.sighashInfo.preimage.length} bytes)
+              </span>
+              <div className="hex-fields">
+                {sig.sighashInfo.preimageFields.map((f, j) => (
+                  <span
+                    key={j}
+                    className="hex-field"
+                    style={{ color: f.color }}
+                    title={`${f.name}: ${f.description}`}
+                  >
+                    {bytesToHex(f.bytes)}
+                  </span>
+                ))}
+              </div>
+
+              <div className="field-legend" style={{ marginTop: '0.75rem' }}>
+                {sig.sighashInfo.preimageFields.map((f, j) => (
+                  <div key={j} className="legend-row">
+                    <span className="legend-color" style={{ background: f.color }} />
+                    <span className="legend-name">{f.name}</span>
+                    <span className="legend-desc">{f.description}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ marginTop: '0.75rem', fontSize: '0.82rem', lineHeight: 1.5 }}>
+                <div>
+                  <strong style={{ color: '#f7931a' }}>sighash</strong>{' '}
+                  <span style={{ color: '#94a3b8' }}>(dSHA256 del preimage):</span>
+                </div>
+                <code style={{ color: '#4ade80', wordBreak: 'break-all', fontSize: '0.78rem' }}>
+                  {bytesToHex(sig.sighashInfo.sighash)}
+                </code>
+
+                <div style={{ marginTop: '0.5rem' }}>
+                  <strong style={{ color: '#f7931a' }}>firma DER + sighash type</strong>{' '}
+                  <span style={{ color: '#94a3b8' }}>
+                    ({sig.signatureWithHashType.length} bytes — se incrusta en witness[0]):
+                  </span>
+                </div>
+                <code style={{ color: '#60a5fa', wordBreak: 'break-all', fontSize: '0.78rem' }}>
+                  {bytesToHex(sig.signatureWithHashType)}
+                </code>
+
+                <div style={{ marginTop: '0.5rem' }}>
+                  <strong style={{ color: '#f7931a' }}>witness[1]</strong>{' '}
+                  <span style={{ color: '#94a3b8' }}>(pubkey comprimida, 33 B):</span>
+                </div>
+                <code style={{ color: '#e879f9', wordBreak: 'break-all', fontSize: '0.78rem' }}>
+                  {bytesToHex(sig.witness[1])}
+                </code>
+              </div>
+            </div>
+          ))}
+
+          {/* Hex final firmado */}
+          <div className="tx-hex-annotated" style={{ marginTop: '1rem' }}>
+            <span className="section-label" style={{ marginBottom: '0.5rem' }}>
+              Transacción firmada — hex listo para broadcast ({signedTx.totalSize} bytes)
+            </span>
+            <div className="hex-fields">
+              {signedTx.fields.map((field, i) => (
+                <span
+                  key={i}
+                  className="hex-field"
+                  style={{ color: field.color }}
+                  title={`${field.name}: ${field.description}`}
+                >
+                  {bytesToHex(field.bytes)}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <div className="next-step-hint" style={{ marginTop: '1rem' }}>
+            La tx ya tiene las firmas reales en el witness. El siguiente paso es
+            enviarla a la red con <strong>POST /tx</strong> en mempool.space —
+            si es válida, entra en el mempool y eventualmente se mina.
+          </div>
+        </div>
+      )}
+
+      {/* Paso 6: Broadcast */}
+      {signedTx && (
+        <div className="txb-section">
+          <span className="section-label">5. Broadcast</span>
+          <p className="section-description">
+            Emitir la transacción = hacer <code>POST</code> del hex firmado al
+            endpoint <code>/tx</code> de un nodo Bitcoin (aquí, mempool.space).
+            Si la tx es válida el nodo devuelve el <em>txid</em> y la propaga por
+            la red. Si algo falla (firma inválida, fee insuficiente, etc.) devuelve
+            un error descriptivo.
+            {network === 'mainnet' && (
+              <>
+                {' '}<strong style={{ color: '#f87171' }}>
+                  Estás en MAINNET: los BTC son reales.
+                </strong>
+              </>
+            )}
+          </p>
+
+          <button
+            className={`txb-btn primary build-btn ${network === 'mainnet' ? 'mainnet-btn' : ''}`}
+            onClick={broadcastSignedTransaction}
+            disabled={broadcasting || broadcastTxid !== null}
+          >
+            {broadcasting
+              ? 'Enviando...'
+              : broadcastTxid
+                ? 'Enviada ✓'
+                : `Enviar a ${network}`}
+          </button>
+
+          {broadcastError && (
+            <div className="txb-error" style={{ marginTop: '0.75rem' }}>
+              {broadcastError}
+            </div>
+          )}
+
+          {broadcastTxid && (
+            <div className="next-step-hint" style={{ marginTop: '1rem' }}>
+              <div style={{ marginBottom: '0.5rem' }}>
+                <strong>Broadcast OK</strong> — txid:
+              </div>
+              <code style={{ color: '#4ade80', wordBreak: 'break-all', fontSize: '0.78rem' }}>
+                {broadcastTxid}
+              </code>
+              <div style={{ marginTop: '0.5rem' }}>
+                <a
+                  href={`https://mempool.space/${network === 'mainnet' ? '' : network + '/'}tx/${broadcastTxid}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: '#f7931a', textDecoration: 'underline' }}
+                >
+                  Ver en mempool.space ↗
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -650,6 +976,42 @@ export function TxBuilder() {
               En SegWit, las firmas van en el witness (fuera del cuerpo
               de la tx). Por eso el scriptSig está vacío. Esto hace que
               el TxID no dependa de las firmas — fin de la maleabilidad.
+            </p>
+          </div>
+          <div className="concept-item">
+            <h4>BIP143: sighash O(N)</h4>
+            <p>
+              El sighash legacy era O(N²): reserializabas la tx entera para cada
+              input. BIP143 precalcula <code>hashPrevouts</code>,{' '}
+              <code>hashSequence</code> y <code>hashOutputs</code> una sola vez
+              y los reutiliza por input. Firma lineal, verificación lineal.
+            </p>
+          </div>
+          <div className="concept-item">
+            <h4>amount en el preimage</h4>
+            <p>
+              BIP143 incluye el valor del UTXO gastado dentro del preimage.
+              Esto permite a una hardware wallet calcular la fee real sin ver
+              la transacción anterior — cierra el ataque "fee sorpresa" que
+              existía con el sighash legacy.
+            </p>
+          </div>
+          <div className="concept-item">
+            <h4>SIGHASH_ALL (0x01)</h4>
+            <p>
+              El tipo de sighash va como último byte de la firma DER. 0x01
+              (SIGHASH_ALL) firma todos los inputs y outputs: el caso normal.
+              Otros tipos (NONE, SINGLE, ANYONECANPAY) existen para flujos
+              especiales como subastas o coinjoins.
+            </p>
+          </div>
+          <div className="concept-item">
+            <h4>Witness P2WPKH = [sig, pk]</h4>
+            <p>
+              El witness de un input P2WPKH son siempre dos items: la firma
+              DER con el byte sighash type al final, y la pubkey comprimida
+              (33 bytes). El nodo hace hash160 de la pubkey y comprueba que
+              coincide con el witness program del scriptPubKey.
             </p>
           </div>
         </div>

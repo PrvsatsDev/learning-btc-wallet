@@ -34,11 +34,12 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 - [x] Scripts: P2PKH, P2WPKH, P2TR (Taproot), Bech32/Bech32m
 - [x] HD Wallets: BIP32 / BIP39 / BIP44 / BIP84 / BIP86 (con SHA-512, HMAC, PBKDF2)
 
-### Fase 3 — La wallet funcional
-- [ ] Generar e importar seed phrase (12/24 palabras)
-- [ ] Derivar árbol de cuentas y direcciones
-- [ ] Conectar a nodo vía Electrum protocol o mempool.space API
-- [ ] Construir, firmar y broadcast de transacciones
+### Fase 3 — La wallet funcional ✅
+- [x] Generar e importar seed phrase (12/24 palabras)
+- [x] Derivar árbol de cuentas y direcciones
+- [x] Conectar a nodo vía mempool.space API (saldos + UTXOs)
+- [x] Construir transacciones (selección de UTXOs, fees, cambio)
+- [x] Firmar con BIP143 sighash + ECDSA y broadcast a la red
 
 ### Fase 4 — UI visual (Sparrow/Liana-style)
 - [ ] Visualizador del árbol de derivación de claves (BIP32 tree)
@@ -60,10 +61,10 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 
 ## Primer paso al volver
 
-Arrancar con **Fase 3**: wallet funcional. Las primitivas ya están implementadas
-(crypto, firmas, scripts, HD wallets). Ahora toca conectar todo para crear una
-wallet que funcione de verdad: generar/importar seed, derivar direcciones,
-consultar saldo vía API, construir y firmar transacciones reales.
+Fase 3 completada: la wallet ya firma y emite transacciones P2WPKH reales en
+testnet4/signet/mainnet. El siguiente paso natural es **Fase 4 — UI visual
+estilo Sparrow/Liana**: árbol de derivación BIP32 navegable, vista inputs→outputs
+de una tx, timeline de UTXOs por dirección, y empezar con multisig/timelocks.
 
 ---
 
