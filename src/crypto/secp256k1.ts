@@ -206,6 +206,28 @@ export function compressPublicKey(point: Point): string {
 }
 
 /**
+ * Descomprime una clave pública: dado x + el bit de paridad, recupera y.
+ *
+ * secp256k1: y² = x³ + 7. Como el primo P ≡ 3 (mod 4), la raíz cuadrada es
+ * directa: y = (x³ + 7)^((P+1)/4) mod P. El prefijo indica qué raíz tomar
+ * (02 = y par, 03 = y impar); si la paridad no coincide, se usa P − y.
+ */
+export function decompressPublicKey(compressed: string): Point {
+  if (compressed.length !== 66) throw new Error('Clave comprimida inválida (se esperan 33 bytes)');
+  const prefix = compressed.slice(0, 2);
+  if (prefix !== '02' && prefix !== '03') throw new Error(`Prefijo de compresión inválido: ${prefix}`);
+
+  const x = BigInt('0x' + compressed.slice(2));
+  const ySq = mod(x ** 3n + B, P);
+  let y = modPow(ySq, (P + 1n) / 4n, P);
+  if (mod(y * y, P) !== ySq) throw new Error('x no corresponde a ningún punto de la curva');
+
+  const wantOdd = prefix === '03';
+  if ((y % 2n === 1n) !== wantOdd) y = mod(-y, P);
+  return { x, y };
+}
+
+/**
  * Serializa una clave pública sin comprimir (65 bytes).
  *
  * Formato: [04] [x 32 bytes] [y 32 bytes]

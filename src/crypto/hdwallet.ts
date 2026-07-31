@@ -19,10 +19,10 @@
 import { sha256 } from './sha256';
 import { ripemd160Hex } from './ripemd160';
 import { hmacSha512, bytesToHex, bigintToBytes, bytesToBigint } from './hmac';
-import { N, getPublicKey, compressPublicKey, type Point } from './secp256k1';
+import { N, getPublicKey, compressPublicKey, decompressPublicKey, pointAdd, type Point } from './secp256k1';
 import { BIP39_WORDLIST } from './bip39-wordlist';
 import { addressP2WPKH, addressP2TR } from './script';
-import { base58Encode } from './base58';
+import { base58Encode, base58Decode } from './base58';
 
 // ─── Tipos ──────────────────────────────────────────────────
 
@@ -231,6 +231,57 @@ export function deriveChild(parent: HDNode, index: number, hardened: boolean = f
 }
 
 /**
+ * CKDpub — deriva una clave hija PÚBLICA sin conocer la clave privada.
+ *
+ * Esta es la magia del watch-only y del multisig: con solo la xpub de un
+ * cosignatario puedes generar todas sus direcciones, pero NO gastar.
+ *
+ *   I  = HMAC-SHA512(chainCode, pubKey_comprimida || index)
+ *   childPub = IL·G + parentPub        (suma de puntos en la curva)
+ *   childChainCode = IR
+ *
+ * Solo funciona para índices NORMALES (no hardened): la derivación hardened
+ * mezcla la clave privada a propósito, justo para que esto no sea posible.
+ * El nodo resultante lleva privateKey = 0n como marca de "clave privada desconocida".
+ */
+export function deriveChildPublic(parent: HDNode, index: number): HDNode {
+  if (index >= 0x80000000) {
+    throw new Error('CKDpub no puede derivar hijos hardened (haría falta la clave privada)');
+  }
+
+  const indexBytes = new Uint8Array(4);
+  indexBytes[0] = (index >>> 24) & 0xff;
+  indexBytes[1] = (index >>> 16) & 0xff;
+  indexBytes[2] = (index >>> 8) & 0xff;
+  indexBytes[3] = index & 0xff;
+
+  const pubKeyBytes = hexToBytes(compressPublicKey(parent.publicKey));
+  const data = new Uint8Array(37);
+  data.set(pubKeyBytes, 0);
+  data.set(indexBytes, 33);
+
+  const hmac = hmacSha512(parent.chainCode, data);
+  const IL = bytesToBigint(hmac.slice(0, 32));
+  const IR = hmac.slice(32);
+  if (IL >= N) throw new Error('IL ≥ n — índice inválido, probar el siguiente');
+
+  // childPub = IL·G + parentPub
+  const childPubKey = pointAdd(getPublicKey(IL), parent.publicKey);
+  if (childPubKey === null) throw new Error('Clave derivada inválida (punto en el infinito)');
+
+  const parentHash = ripemd160Hex(hexToBytes(sha256(hexToBytes(compressPublicKey(parent.publicKey))).hash));
+
+  return {
+    privateKey: 0n, // desconocida: derivación pública (watch-only)
+    publicKey: childPubKey,
+    chainCode: IR,
+    depth: parent.depth + 1,
+    index,
+    parentFingerprint: parentHash.slice(0, 8),
+  };
+}
+
+/**
  * Deriva una clave siguiendo una ruta BIP32 completa.
  * Ejemplo: "m/44'/0'/0'/0/0"
  *
@@ -413,6 +464,40 @@ export function serializeXpub(node: HDNode, mainnet = true): string {
   full.set(data, 0);
   full.set(checksum, 78);
   return base58Encode(full);
+}
+
+/**
+ * Parsea una xpub/tpub (Base58Check) a un nodo PÚBLICO (privateKey = 0n).
+ *
+ * Es la puerta de entrada del watch-only: pegas la xpub de un cosignatario y
+ * puedes derivar sus direcciones con `deriveChildPublic`, sin su clave privada.
+ * Valida el checksum doble-SHA256 y la versión (xpub mainnet / tpub testnet).
+ */
+export function parseXpub(xpub: string): { node: HDNode; mainnet: boolean } {
+  const data = base58Decode(xpub);
+  if (data.length !== 82) throw new Error('xpub: longitud inválida (se esperan 82 bytes)');
+
+  const payload = data.slice(0, 78);
+  const checksum = data.slice(78);
+  const expected = hexToBytes(sha256(hexToBytes(sha256(payload).hash)).hash).slice(0, 4);
+  if (!checksum.every((b, i) => b === expected[i])) throw new Error('xpub: checksum inválido');
+
+  const version = data[0] * 0x1000000 + data[1] * 0x10000 + data[2] * 0x100 + data[3];
+  const mainnet = version === XPUB_VERSION_MAINNET;
+  if (!mainnet && version !== XPUB_VERSION_TESTNET) {
+    throw new Error('xpub: versión desconocida (¿es una clave privada xprv, o de otra red?)');
+  }
+
+  const depth = data[4];
+  const parentFingerprint = bytesToHex(data.slice(5, 9));
+  const index = data[9] * 0x1000000 + data[10] * 0x10000 + data[11] * 0x100 + data[12];
+  const chainCode = data.slice(13, 45);
+  const publicKey = decompressPublicKey(bytesToHex(data.slice(45, 78)));
+
+  return {
+    node: { privateKey: 0n, publicKey, chainCode, depth, index, parentFingerprint },
+    mainnet,
+  };
 }
 
 /** Una clave de cosignatario lista para meter en un descriptor multisig. */
