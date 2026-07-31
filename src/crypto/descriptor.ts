@@ -16,7 +16,7 @@
  */
 
 import { createMultisig, addressP2WSH } from './script';
-import { derivePath, deriveChild, getMultisigDerivationPath, type HDNode, type MultisigKey, type MultisigScriptType } from './hdwallet';
+import { derivePath, deriveChildPublic, getMultisigDerivationPath, type HDNode, type MultisigScriptType } from './hdwallet';
 import { compressPublicKey } from './secp256k1';
 
 // ─── BIP67: orden lexicográfico de claves ───────────────────
@@ -111,7 +111,7 @@ export function withChecksum(descriptor: string): string {
  * @param chain '0' recepción, '1' cambio, o '<0;1>' (multipath, ambas).
  */
 export function buildWshSortedMulti(
-  keys: MultisigKey[],
+  keys: { keyExpression: string }[],
   m: number,
   chain: '0' | '1' | '<0;1>' = '<0;1>',
 ): string {
@@ -146,17 +146,20 @@ export function p2wshMultisigAddress(
  * nodo `change` una sola vez por cosignatario y de ahí cada índice: es la parte
  * cara (curva elíptica), así que se minimiza. Devuelve, por índice, las pubkeys
  * SIN ordenar — el ordenado BIP67 y el umbral m se aplican después (barato).
+ *
+ * Usa CKDpub (derivación pública): funciona igual con nodos derivados de una
+ * semilla que con nodos watch-only obtenidos de una xpub (sin clave privada).
  */
 export function deriveIndexPubkeys(
   accountNodes: HDNode[],
   change: 0 | 1,
   count: number,
 ): Uint8Array[][] {
-  const changeNodes = accountNodes.map(account => deriveChild(account, change, false));
+  const changeNodes = accountNodes.map(account => deriveChildPublic(account, change));
   const perIndex: Uint8Array[][] = [];
   for (let i = 0; i < count; i++) {
     perIndex.push(
-      changeNodes.map(cn => hexToBytes(compressPublicKey(deriveChild(cn, i, false).publicKey))),
+      changeNodes.map(cn => hexToBytes(compressPublicKey(deriveChildPublic(cn, i).publicKey))),
     );
   }
   return perIndex;
