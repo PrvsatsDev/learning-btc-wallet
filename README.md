@@ -31,7 +31,7 @@ responsabilidad.
 ## Stack
 
 - **TypeScript + React** — frontend interactivo con tipado explícito
-- **Tauri** — runtime nativo (Rust), mucho más ligero que Electron
+- **Tauri** — andamiaje presente para empaquetado nativo futuro (opcional, requiere Rust; la app corre en el navegador sin él)
 - **Criptografía propia** — todo implementado desde cero, sin librerías externas
 
 ## Qué hay implementado
@@ -76,15 +76,14 @@ Módulos de soporte: SHA-512 (`sha512.ts`), HMAC-SHA256/512 (`hmac.ts`), wordlis
 
 ## Desarrollo
 
+La app corre en el navegador con Vite — no necesitas nada más para usarla:
+
 ```bash
 # Instalar dependencias
 npm install
 
-# Servidor de desarrollo (frontend)
+# Servidor de desarrollo (abre en el navegador)
 npm run dev
-
-# Aplicación nativa (requiere Rust)
-npm run tauri dev
 ```
 
 ### Fase 3 — Wallet funcional
