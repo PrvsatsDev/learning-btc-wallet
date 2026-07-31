@@ -1,0 +1,512 @@
+/* MultisigGuide — Fase 4, guía conceptual */
+
+.mg {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+/* ─── Cabecera ────────────────────────────────────────── */
+
+.mg-header {
+  margin-bottom: 1.5rem;
+}
+
+.mg-phase-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f7931a;
+  background: #f7931a1a;
+  border: 1px solid #f7931a33;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  margin-bottom: 0.75rem;
+}
+
+.mg-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+.mg-subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ─── Nota informativa ────────────────────────────────── */
+
+.mg-note {
+  margin-bottom: 2rem;
+  padding: 1rem 1.25rem;
+  background: #0c2f3a;
+  border: 1px solid #22d3ee33;
+  border-left: 4px solid #22d3ee;
+  border-radius: 10px;
+}
+
+.mg-note-tag {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #67e8f9;
+  margin-bottom: 0.5rem;
+}
+
+.mg-note p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+/* ─── Secciones ───────────────────────────────────────── */
+
+.mg-section {
+  margin-bottom: 2.75rem;
+}
+
+.mg-section h2 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0 0 0.6rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #1e293b;
+}
+
+.mg-section h2 code {
+  color: #f7931a;
+}
+
+.mg-lead {
+  color: #94a3b8;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 0 0 1.25rem;
+}
+
+.mg em { color: #cbd5e1; font-style: italic; }
+.mg strong { color: #f1f5f9; }
+
+.mg code {
+  font-family: ui-monospace, 'SF Mono', 'Menlo', monospace;
+  font-size: 0.86em;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+  color: #e2e8f0;
+}
+
+/* ─── Esquemas m-of-n ─────────────────────────────────── */
+
+.mg-scheme-grid,
+.mg-script-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 1rem;
+}
+
+.mg-scheme-card,
+.mg-script-card {
+  position: relative;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.mg-recommended {
+  border-color: #f7931a66;
+  box-shadow: 0 0 0 1px #f7931a22;
+}
+
+.mg-badge {
+  position: absolute;
+  top: -0.6rem;
+  right: 0.9rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #0f172a;
+  background: #f7931a;
+  border-radius: 999px;
+  padding: 0.2rem 0.6rem;
+}
+
+/* Variantes de badge para el foco de aprendizaje (sección de scripts) */
+.mg-badge-secondary {
+  background: #334155;
+  color: #cbd5e1;
+}
+
+.mg-badge-muted {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #334155;
+}
+
+.mg-scheme-label {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #f7931a;
+  font-family: ui-monospace, monospace;
+}
+
+.mg-scheme-tag {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #94a3b8;
+  margin: 0.15rem 0 0.6rem;
+}
+
+.mg-scheme-card p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: #cbd5e1;
+}
+
+/* ─── Constructor interactivo ─────────────────────────── */
+
+.mg-builder {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 1.25rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.mg-sliders {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  justify-content: center;
+}
+
+.mg-slider {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+
+.mg-slider strong { color: #f7931a; font-family: ui-monospace, monospace; }
+
+.mg-slider input[type='range'] {
+  width: 100%;
+  accent-color: #f7931a;
+  cursor: pointer;
+}
+
+.mg-builder-out {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.mg-resilience {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  background: #f7931a12;
+  border: 1px solid #f7931a33;
+  border-radius: 8px;
+}
+
+.mg-resilience-num {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #f7931a;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+.mg-resilience-text {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.mg-codeblock {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mg-codeblock-label {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  padding: 0.4rem 0.75rem;
+  background: #0f172a;
+  border-bottom: 1px solid #334155;
+}
+
+.mg-codeblock code {
+  display: block;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #7dd3fc;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ─── Callouts ────────────────────────────────────────── */
+
+.mg-callout {
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.mg-callout-tag {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.mg-callout p {
+  margin: 0 0 0.6rem;
+  font-size: 0.87rem;
+  line-height: 1.6;
+}
+
+.mg-callout p:last-child { margin-bottom: 0; }
+
+.mg-callout-warn {
+  background: #2a2412;
+  border: 1px solid #eab30833;
+  border-left: 4px solid #eab308;
+}
+.mg-callout-warn .mg-callout-tag { color: #fde047; }
+
+.mg-callout-danger {
+  background: #2a1212;
+  border: 1px solid #ef444455;
+  border-left: 4px solid #ef4444;
+}
+.mg-callout-danger .mg-callout-tag { color: #fca5a5; }
+
+.mg-golden {
+  padding: 0.85rem 1rem;
+  background: #f7931a12;
+  border: 1px solid #f7931a33;
+  border-radius: 8px;
+  color: #fde7c8 !important;
+}
+
+/* ─── Tipos de script ─────────────────────────────────── */
+
+.mg-script-card h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1.05rem;
+  color: #f7931a;
+}
+
+.mg-script-addr {
+  display: block;
+  font-size: 0.78rem;
+  font-family: ui-monospace, monospace;
+  color: #94a3b8;
+  margin-bottom: 0.85rem;
+}
+
+.mg-script-card dl { margin: 0; }
+
+.mg-script-card dl > div {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+  border-top: 1px solid #334155;
+}
+
+.mg-script-card dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #64748b;
+}
+
+.mg-script-card dd {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+/* ─── Anatomía del descriptor ─────────────────────────── */
+
+.mg-descriptor {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+}
+
+.mg-descriptor code {
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.85rem;
+  line-height: 1.7;
+  white-space: pre;
+  color: #64748b;
+}
+
+.mg-d-func   { color: #c084fc; font-weight: 700; }
+.mg-d-thresh { color: #f7931a; font-weight: 700; }
+.mg-d-origin { color: #34d399; }
+.mg-d-xpub   { color: #7dd3fc; }
+.mg-d-path   { color: #fbbf24; }
+.mg-d-check  { color: #f87171; }
+
+.mg-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mg-legend li {
+  display: grid;
+  grid-template-columns: 0.9rem 1fr;
+  gap: 0.6rem;
+  align-items: start;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.mg-legend-text {
+  min-width: 0;              /* permite que los <code> largos rompan en vez de desbordar */
+  overflow-wrap: anywhere;
+}
+
+.mg-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 3px;
+  margin-top: 0.28rem;
+}
+
+.mg-d-func-bg   { background: #c084fc; }
+.mg-d-thresh-bg { background: #f7931a; }
+.mg-d-origin-bg { background: #34d399; }
+.mg-d-xpub-bg   { background: #7dd3fc; }
+.mg-d-path-bg   { background: #fbbf24; }
+.mg-d-check-bg  { background: #f87171; }
+
+/* ─── Qué guardar y dónde ─────────────────────────────── */
+
+.mg-storage {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mg-storage-row {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.1fr) auto 2fr;
+  gap: 0.85rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-left-width: 4px;
+  border-radius: 8px;
+}
+
+.mg-storage-never { border-left-color: #ef4444; }
+.mg-storage-care  { border-left-color: #eab308; }
+.mg-storage-ok    { border-left-color: #22c55e; }
+
+.mg-storage-piece {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.mg-storage-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.mg-badge-never { background: #ef444422; color: #fca5a5; border: 1px solid #ef444455; }
+.mg-badge-care  { background: #eab30822; color: #fde047; border: 1px solid #eab30855; }
+.mg-badge-ok    { background: #22c55e22; color: #86efac; border: 1px solid #22c55e55; }
+
+.mg-storage-who {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+/* ─── Próximo paso ────────────────────────────────────── */
+
+.mg-next {
+  margin-bottom: 0;
+}
+
+.mg-next p {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* ─── Responsive ──────────────────────────────────────── */
+
+@media (max-width: 680px) {
+  .mg-builder {
+    grid-template-columns: 1fr;
+  }
+
+  .mg-storage-row {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      'piece badge'
+      'who   who';
+    row-gap: 0.5rem;
+  }
+  .mg-storage-piece { grid-area: piece; }
+  .mg-storage-badge { grid-area: badge; }
+  .mg-storage-who   { grid-area: who; }
+}

@@ -13,13 +13,15 @@ import { WalletSetup } from './components/WalletSetup';
 import { BalanceChecker } from './components/BalanceChecker';
 import { TxBuilder } from './components/TxBuilder';
 import { EntropyAuditor } from './components/EntropyAuditor';
+import { MultisigGuide } from './components/MultisigGuide';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
 import './App.css';
 
 type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
   | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
-  | 'wallet-setup' | 'balance' | 'tx-builder' | 'entropy-audit';
+  | 'wallet-setup' | 'balance' | 'tx-builder' | 'entropy-audit'
+  | 'multisig-guide';
 
 interface Phase {
   id: string;
@@ -48,6 +50,7 @@ const phases: Phase[] = [
       { id: 'transaction', label: 'Transacciones', component: TransactionExplorer },
       { id: 'scripts', label: 'Script', component: ScriptExplorer },
       { id: 'hdwallet', label: 'HD Wallets', component: HdWalletExplorer },
+      { id: 'multisig-guide', label: 'Multisig (guía)', component: MultisigGuide },
     ],
   },
   {
@@ -73,50 +76,76 @@ function App() {
   return (
     <div className="app">
       <DisclaimerBanner />
-      <nav className="app-nav">
-        <span className="nav-brand">BTC Wallet</span>
-        <span className="nav-current-label">{activeLessonLabel}</span>
-        <button
-          className="nav-hamburger"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Menú"
-        >
-          <span className={`hamburger-icon ${menuOpen ? 'open' : ''}`} />
-        </button>
-        <div className={`nav-phases ${menuOpen ? 'nav-phases--open' : ''}`}>
-          {phases.map((phase) => (
-            <div key={phase.id} className="nav-phase-group">
-              <span className="nav-phase">{phase.label}</span>
-              <div className="nav-lessons">
-                {phase.lessons.map((lesson) => (
-                  <button
-                    key={lesson.id}
-                    className={`nav-btn ${activeLesson === lesson.id ? 'active' : ''}`}
-                    onClick={() => {
-                      setActiveLesson(lesson.id);
-                      setMenuOpen(false);
-                    }}
-                  >
-                    {lesson.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </nav>
-      <ActiveComponent />
 
-      <footer className="app-footer">
-        <span>Proyecto educativo de código abierto (MIT) ·</span>
-        <a
-          href="https://github.com/PrvsatsDev/learning-btc-wallet"
-          target="_blank"
-          rel="noreferrer noopener"
-        >
-          Ver, clonar o auditar en GitHub
-        </a>
-      </footer>
+      <div className="app-shell">
+        {/* Barra lateral vertical — sidebar fija en escritorio, drawer en móvil */}
+        <aside className={`app-sidebar ${menuOpen ? 'app-sidebar--open' : ''}`}>
+          <div className="sidebar-head">
+            <span className="nav-brand">BTC Wallet</span>
+            <button
+              className="sidebar-close"
+              onClick={() => setMenuOpen(false)}
+              aria-label="Cerrar menú"
+            >
+              ✕
+            </button>
+          </div>
+          <nav className="sidebar-nav">
+            {phases.map((phase) => (
+              <div key={phase.id} className="nav-phase-group">
+                <span className="nav-phase">{phase.label}</span>
+                <div className="nav-lessons">
+                  {phase.lessons.map((lesson) => (
+                    <button
+                      key={lesson.id}
+                      className={`nav-btn ${activeLesson === lesson.id ? 'active' : ''}`}
+                      onClick={() => {
+                        setActiveLesson(lesson.id);
+                        setMenuOpen(false);
+                      }}
+                    >
+                      {lesson.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </aside>
+
+        {/* Telón para cerrar el drawer al tocar fuera (solo móvil) */}
+        {menuOpen && (
+          <div className="sidebar-backdrop" onClick={() => setMenuOpen(false)} />
+        )}
+
+        <div className="app-main">
+          {/* Barra superior — solo visible en móvil */}
+          <div className="app-topbar">
+            <button
+              className="nav-hamburger"
+              onClick={() => setMenuOpen(true)}
+              aria-label="Abrir menú"
+            >
+              <span className="hamburger-icon" />
+            </button>
+            <span className="nav-brand">BTC Wallet</span>
+            <span className="nav-current-label">{activeLessonLabel}</span>
+          </div>
+
+          <ActiveComponent />
+
+          <footer className="app-footer">
+            <span>Proyecto educativo de código abierto (MIT) ·</span>
+            <a
+              href="https://github.com/PrvsatsDev/learning-btc-wallet"
+              target="_blank"
+              rel="noreferrer noopener"
+            >
+              Ver, clonar o auditar en GitHub
+            </a>
+          </footer>
+        </div>
+      </div>
     </div>
   );
 }
