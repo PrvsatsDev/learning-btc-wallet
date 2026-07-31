@@ -12,6 +12,7 @@
  *   P2PKH  — Pay to Public Key Hash (dirección 1xxx, el clásico)
  *   P2WPKH — Pay to Witness Public Key Hash (dirección bc1qxxx, SegWit v0)
  *   P2TR   — Pay to Taproot (dirección bc1pxxx, SegWit v1)
+ *   Multisig m-of-n (OP_CHECKMULTISIG) y su envoltorio P2WSH (bc1q..., 32 bytes)
  */
 
 import { sha256 } from './sha256';
@@ -22,12 +23,30 @@ import { ripemd160Hex } from './ripemd160';
 export const OP = {
   // Constantes
   OP_0: 0x00,
-  OP_1: 0x51,
   OP_PUSHBYTES_20: 0x14,
   OP_PUSHBYTES_32: 0x20,
   OP_PUSHBYTES_33: 0x21,
   OP_PUSHBYTES_65: 0x41,
   OP_PUSHDATA1: 0x4c,
+
+  // Números pequeños: OP_1..OP_16 apilan el entero 1..16 (OP_n = 0x50 + n).
+  // Se usan como umbral (m) y total (n) en los scripts multisig.
+  OP_1: 0x51,
+  OP_2: 0x52,
+  OP_3: 0x53,
+  OP_4: 0x54,
+  OP_5: 0x55,
+  OP_6: 0x56,
+  OP_7: 0x57,
+  OP_8: 0x58,
+  OP_9: 0x59,
+  OP_10: 0x5a,
+  OP_11: 0x5b,
+  OP_12: 0x5c,
+  OP_13: 0x5d,
+  OP_14: 0x5e,
+  OP_15: 0x5f,
+  OP_16: 0x60,
 
   // Flow
   OP_NOP: 0x61,
@@ -40,6 +59,7 @@ export const OP = {
   // Crypto
   OP_HASH160: 0xa9,
   OP_CHECKSIG: 0xac,
+  OP_CHECKMULTISIG: 0xae,
 
   // Comparison
   OP_EQUAL: 0x87,
@@ -109,21 +129,26 @@ export function executeScript(
         continue;
       }
 
+      // OP_1..OP_16: apilan el entero 1..16 (small ints). En multisig son el
+      // umbral m (OP_2 = "hacen falta 2 firmas") y el total n (OP_3 = "de 3 claves").
+      if (opcode >= OP.OP_1 && opcode <= OP.OP_16) {
+        const num = opcode - 0x50;
+        stack.push(new Uint8Array([num]));
+        steps.push({
+          opcode, opcodeName: `OP_${num}`,
+          description: `Apilar el número ${num}`,
+          stack: stackToHex(), consumed: [],
+          produced: [num.toString(16).padStart(2, '0')],
+        });
+        continue;
+      }
+
       switch (opcode) {
         case OP.OP_0: {
           stack.push(new Uint8Array(0));
           steps.push({
             opcode, opcodeName: 'OP_0', description: 'Apilar valor vacío (false/cero)',
             stack: stackToHex(), consumed: [], produced: ['(empty)'],
-          });
-          break;
-        }
-
-        case OP.OP_1: {
-          stack.push(new Uint8Array([1]));
-          steps.push({
-            opcode, opcodeName: 'OP_1', description: 'Apilar 1 (true)',
-            stack: stackToHex(), consumed: [], produced: ['01'],
           });
           break;
         }
@@ -209,6 +234,65 @@ export function executeScript(
           break;
         }
 
+        case OP.OP_CHECKMULTISIG: {
+          // Pila esperada (de abajo a arriba):
+          //   <dummy> <sig1..sigM> <M> <pk1..pkN> <N>
+          // Se desapila de arriba abajo: primero N, luego las N claves, luego M,
+          // luego las M firmas, y por último el <dummy>.
+          if (stack.length < 1) throw new Error('OP_CHECKMULTISIG: falta N');
+          const n = readScriptNum(stack.pop()!);
+          if (n < 0 || n > 20) throw new Error(`OP_CHECKMULTISIG: N inválido (${n})`);
+          if (stack.length < n) throw new Error('OP_CHECKMULTISIG: faltan claves públicas');
+          const pubKeys: Uint8Array[] = [];
+          for (let i = 0; i < n; i++) pubKeys.unshift(stack.pop()!);
+
+          if (stack.length < 1) throw new Error('OP_CHECKMULTISIG: falta M');
+          const m = readScriptNum(stack.pop()!);
+          if (m < 0 || m > n) throw new Error(`OP_CHECKMULTISIG: M inválido (${m} de ${n})`);
+          if (stack.length < m) throw new Error('OP_CHECKMULTISIG: faltan firmas');
+          const sigs: Uint8Array[] = [];
+          for (let i = 0; i < m; i++) sigs.unshift(stack.pop()!);
+
+          // EL BUG HISTÓRICO: OP_CHECKMULTISIG desapila un elemento de más. Es un
+          // fallo de la implementación original que quedó fijado en las reglas de
+          // consenso. Por eso el scriptSig/witness DEBE empezar con un elemento
+          // basura (normalmente OP_0). Si falta, aquí se subdesborda la pila.
+          if (stack.length < 1) {
+            throw new Error('OP_CHECKMULTISIG: falta el elemento dummy (el bug del off-by-one)');
+          }
+          const dummy = stack.pop()!;
+
+          // Emparejado: las firmas deben ir en el MISMO orden que las claves.
+          // Se recorre buscando, para cada firma, la siguiente clave que la valide.
+          let ok = true;
+          let keyIdx = 0;
+          for (let s = 0; s < sigs.length; s++) {
+            let matched = false;
+            while (keyIdx < pubKeys.length) {
+              const valid = checkSigFn ? checkSigFn(sigs[s], pubKeys[keyIdx]) : true;
+              keyIdx++;
+              if (valid) { matched = true; break; }
+            }
+            if (!matched) { ok = false; break; }
+          }
+
+          stack.push(new Uint8Array([ok ? 1 : 0]));
+          steps.push({
+            opcode, opcodeName: 'OP_CHECKMULTISIG',
+            description: `Verificar ${m}-of-${n} (consume un dummy extra) → ${ok ? 'Válido ✓' : 'Inválido ✗'}`,
+            stack: stackToHex(),
+            consumed: [
+              bytesToHex(dummy),
+              ...sigs.map(bytesToHex),
+              m.toString(16).padStart(2, '0'),
+              ...pubKeys.map(bytesToHex),
+              n.toString(16).padStart(2, '0'),
+            ],
+            produced: [ok ? '01' : '00'],
+          });
+          break;
+        }
+
         case OP.OP_VERIFY: {
           const top = stack.pop()!;
           const isTrue = top.length > 0 && top.some(b => b !== 0);
@@ -286,6 +370,52 @@ export function createP2TR(tweakedPubKeyX: Uint8Array): Uint8Array {
     OP.OP_1,    // witness version 1
     0x20,       // push 32 bytes
     ...tweakedPubKeyX,
+  ]);
+}
+
+/**
+ * witnessScript multisig m-of-n:
+ *   OP_m <pubkey1> <pubkey2> ... <pubkeyN> OP_n OP_CHECKMULTISIG
+ *
+ * Es el script que hay que cumplir para gastar. En P2WSH este script NO va en la
+ * dirección: solo va su SHA-256 (ver createP2WSH). Se revela al gastar, en el witness.
+ *
+ * Las claves suelen ser comprimidas (33 bytes). El orden importa para el gasto;
+ * para descriptores reproducibles se ordenan lexicográficamente (sortedmulti / BIP67),
+ * pero eso es cosa de la capa de descriptor, no de este script.
+ */
+export function createMultisig(m: number, pubKeys: Uint8Array[]): Uint8Array {
+  const n = pubKeys.length;
+  if (n < 1 || n > 16) throw new Error('n (número de claves) debe estar entre 1 y 16');
+  if (m < 1 || m > n) throw new Error(`m (umbral) debe estar entre 1 y ${n}`);
+
+  const script: number[] = [];
+  script.push(0x50 + m);           // OP_m
+  for (const pk of pubKeys) {
+    if (pk.length > 0x4b) throw new Error('clave demasiado larga para un push simple');
+    script.push(pk.length);        // push de la clave (0x21 = 33 bytes si es comprimida)
+    script.push(...pk);
+  }
+  script.push(0x50 + n);           // OP_n
+  script.push(OP.OP_CHECKMULTISIG);
+  return new Uint8Array(script);
+}
+
+/**
+ * P2WSH scriptPubKey: OP_0 <32 bytes SHA-256(witnessScript)>
+ * SegWit v0 nativo, pero para SCRIPTS arbitrarios (multisig, timelocks…), no para
+ * una sola clave. Direcciones bc1q... más largas que P2WPKH (32 bytes vs 20).
+ *
+ * Diferencia clave con P2WPKH: aquí se usa SHA-256 «a secas» (32 bytes), no HASH160
+ * (RIPEMD160(SHA256), 20 bytes). Con scripts, 20 bytes darían poca resistencia a
+ * colisiones para un atacante que elige el script.
+ */
+export function createP2WSH(witnessScript: Uint8Array): Uint8Array {
+  const hash = hexToBytes(sha256(witnessScript).hash);   // SHA-256, 32 bytes
+  return new Uint8Array([
+    OP.OP_0,    // witness version 0
+    0x20,       // push 32 bytes
+    ...hash,
   ]);
 }
 
@@ -459,7 +589,28 @@ export function addressP2TR(tweakedPubKeyX: Uint8Array, mainnet = true): string 
   return bech32Encode(mainnet ? 'bc' : 'tb', 1, tweakedPubKeyX);
 }
 
+/**
+ * Genera una dirección P2WSH (bc1q..., 32 bytes) desde un witnessScript.
+ * El programa testigo es SHA-256(witnessScript). Sirve para multisig y otros scripts.
+ */
+export function addressP2WSH(witnessScript: Uint8Array, mainnet = true): string {
+  const hash = hexToBytes(sha256(witnessScript).hash);
+  return bech32Encode(mainnet ? 'bc' : 'tb', 0, hash);
+}
+
 // ─── Utilidades ─────────────────────────────────────────────
+
+/**
+ * Lee un "script number" de la pila. Bitcoin los guarda en little-endian con signo
+ * (complemento a uno en el bit alto). Aquí solo manejamos enteros pequeños y
+ * positivos (0..20: los umbrales/totales de multisig), así que basta con leer los
+ * bytes en little-endian. Un item vacío representa el 0.
+ */
+function readScriptNum(item: Uint8Array): number {
+  let value = 0;
+  for (let i = 0; i < item.length; i++) value |= item[i] << (8 * i);
+  return value;
+}
 
 function hexToBytes(hex: string): Uint8Array {
   const bytes = new Uint8Array(hex.length / 2);

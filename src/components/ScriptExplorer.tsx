@@ -4,10 +4,14 @@ import {
   createP2PKH,
   createP2WPKH,
   createP2TR,
+  createMultisig,
+  createP2WSH,
   disassemble,
   addressP2WPKH,
   addressP2TR,
+  addressP2WSH,
   type ScriptStep,
+  type ScriptExecutionResult,
 } from '../crypto/script';
 import { sha256 } from '../crypto/sha256';
 import { ripemd160Hex } from '../crypto/ripemd160';
@@ -28,7 +32,17 @@ function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-type ScriptType = 'p2pkh' | 'p2wpkh' | 'p2tr';
+type ScriptType = 'p2pkh' | 'p2wpkh' | 'p2tr' | 'multisig';
+
+interface ScriptData {
+  codeLabel: string;                        // etiqueta del bloque de código
+  scriptPubKey: Uint8Array;
+  scriptPubKeyHex: string;
+  disassembled: string[];
+  combined: Uint8Array;
+  execution: ScriptExecutionResult | null;
+  p2wshAddress?: string;                    // solo multisig
+}
 
 // ─── Componente ──────────────────────────────────────────────
 
@@ -64,10 +78,10 @@ export function ScriptExplorer() {
   }, [privKeyHex]);
 
   // Generar scripts según el tipo
-  const scriptData = useMemo(() => {
+  const scriptData = useMemo<ScriptData | null>(() => {
     if (!keyData) return null;
 
-    const { pubKeyBytes, hash160Bytes, xOnlyBytes } = keyData;
+    const { privKey, pubKeyBytes, hash160Bytes, xOnlyBytes } = keyData;
 
     switch (scriptType) {
       case 'p2pkh': {
@@ -84,6 +98,7 @@ export function ScriptExplorer() {
         ]);
 
         return {
+          codeLabel: 'scriptPubKey',
           scriptPubKey,
           scriptPubKeyHex: bytesToHex(scriptPubKey),
           disassembled: disassemble(scriptPubKey),
@@ -94,6 +109,7 @@ export function ScriptExplorer() {
       case 'p2wpkh': {
         const scriptPubKey = createP2WPKH(hash160Bytes);
         return {
+          codeLabel: 'scriptPubKey',
           scriptPubKey,
           scriptPubKeyHex: bytesToHex(scriptPubKey),
           disassembled: disassemble(scriptPubKey),
@@ -104,11 +120,43 @@ export function ScriptExplorer() {
       case 'p2tr': {
         const scriptPubKey = createP2TR(xOnlyBytes);
         return {
+          codeLabel: 'scriptPubKey',
           scriptPubKey,
           scriptPubKeyHex: bytesToHex(scriptPubKey),
           disassembled: disassemble(scriptPubKey),
           combined: scriptPubKey,
           execution: null, // Taproot usa witness
+        };
+      }
+      case 'multisig': {
+        // 3 claves reales, derivadas de privKey, privKey+1 y privKey+2 (solo para el demo).
+        const pubkeys = [0n, 1n, 2n].map(d => {
+          const pt = getPublicKey(privKey + d)!;
+          return hexToBytes(compressPublicKey(pt));
+        });
+        const witnessScript = createMultisig(2, pubkeys);   // 2-of-3
+        const scriptPubKey = createP2WSH(witnessScript);    // OP_0 <SHA256(witnessScript)>
+
+        // Gasto simulado: <dummy OP_0> <sig1> <sig2>  ++  witnessScript.
+        // Sin checkSigFn, las firmas simuladas se dan por válidas (como en el demo P2PKH):
+        // lo interesante aquí es VER cómo OP_CHECKMULTISIG consume el dummy y valida m-of-n.
+        const fakeSig1 = new Uint8Array(72).fill(0xab);
+        const fakeSig2 = new Uint8Array(72).fill(0xcd);
+        const combined = new Uint8Array([
+          0x00,                            // OP_0: el elemento dummy que exige el bug
+          fakeSig1.length, ...fakeSig1,    // PUSH firma 1
+          fakeSig2.length, ...fakeSig2,    // PUSH firma 2
+          ...witnessScript,
+        ]);
+
+        return {
+          codeLabel: 'witnessScript (2-of-3)',
+          scriptPubKey,
+          scriptPubKeyHex: bytesToHex(scriptPubKey),
+          disassembled: disassemble(witnessScript),   // mostramos el witnessScript, que es lo que se revela al gastar
+          combined,
+          execution: executeScript(combined),
+          p2wshAddress: addressP2WSH(witnessScript),
         };
       }
     }
@@ -188,6 +236,13 @@ export function ScriptExplorer() {
             <span className="script-type-label">P2TR</span>
             <span className="script-type-addr">bc1pxxx... (Taproot)</span>
           </button>
+          <button
+            className={`script-type-btn ${scriptType === 'multisig' ? 'active' : ''}`}
+            onClick={() => setScriptType('multisig')}
+          >
+            <span className="script-type-label">Multisig</span>
+            <span className="script-type-addr">2-of-3 P2WSH</span>
+          </button>
         </div>
 
         {/* Explicación del tipo */}
@@ -215,14 +270,26 @@ export function ScriptExplorer() {
             privacidad. Tambien soporta scripts complejos ocultos en el arbol Merkle.
           </p>
         )}
+        {scriptType === 'multisig' && (
+          <p className="section-description">
+            <strong>Multisig m-of-n</strong> — aquí un 2-of-3 dentro de un P2WSH.
+            El <em>witnessScript</em> es <code>OP_2 &lt;pk1&gt; &lt;pk2&gt; &lt;pk3&gt; OP_3 OP_CHECKMULTISIG</code>,
+            y la dirección solo guarda su SHA-256 (32 bytes). Al gastar se revela el script y se
+            aportan 2 firmas, precedidas por un elemento vacío: <code>OP_CHECKMULTISIG</code> consume
+            una posición de más por un bug histórico que quedó en las reglas de consenso.
+            (Las 3 claves salen de privKey, privKey+1 y privKey+2, solo para el demo.)
+          </p>
+        )}
       </div>
 
       {/* ScriptPubKey desensamblado */}
       {scriptData && (
         <div className="script-section">
-          <span className="section-label">scriptPubKey</span>
+          <span className="section-label">{scriptData.codeLabel}</span>
           <p className="section-description">
-            El script que bloquea los fondos. Se guarda en la salida (output) de la transaccion.
+            {scriptType === 'multisig'
+              ? 'El script con las condiciones de gasto (el que se revela en el witness al gastar). La dirección solo guarda su hash.'
+              : 'El script que bloquea los fondos. Se guarda en la salida (output) de la transaccion.'}
           </p>
 
           <div className="script-code">
@@ -245,18 +312,25 @@ export function ScriptExplorer() {
           </div>
 
           <div style={{ marginTop: '0.75rem', fontSize: '0.72rem', color: '#64748b' }}>
-            Hex: <code style={{ color: '#94a3b8' }}>{scriptData.scriptPubKeyHex}</code>
+            {scriptType === 'multisig' ? 'scriptPubKey (OP_0 + SHA256): ' : 'Hex: '}
+            <code style={{ color: '#94a3b8' }}>{scriptData.scriptPubKeyHex}</code>
           </div>
+          {scriptData.p2wshAddress && (
+            <div style={{ marginTop: '0.4rem', fontSize: '0.72rem', color: '#64748b' }}>
+              Dirección P2WSH: <code style={{ color: '#f7931a' }}>{scriptData.p2wshAddress}</code>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Ejecucion paso a paso (solo P2PKH tiene ejecucion clasica) */}
-      {scriptType === 'p2pkh' && scriptData?.execution && (
+      {/* Ejecucion paso a paso (P2PKH y multisig ejecutan pila de forma visible) */}
+      {(scriptType === 'p2pkh' || scriptType === 'multisig') && scriptData?.execution && (
         <div className="script-section">
           <span className="section-label">Ejecucion del script</span>
           <p className="section-description">
-            El nodo ejecuta scriptSig (firma + pubKey) seguido de scriptPubKey.
-            Si la pila queda con "true" en el tope, la transaccion es valida.
+            {scriptType === 'multisig'
+              ? 'Se apilan el dummy y las 2 firmas, luego el witnessScript (claves + OP_CHECKMULTISIG). Fíjate en el paso OP_CHECKMULTISIG: consume el dummy, las firmas y las claves, y deja "true" si el m-of-n se cumple.'
+              : 'El nodo ejecuta scriptSig (firma + pubKey) seguido de scriptPubKey. Si la pila queda con "true" en el tope, la transaccion es valida.'}
           </p>
 
           <div className="exec-controls">
@@ -322,7 +396,7 @@ export function ScriptExplorer() {
       )}
 
       {/* SegWit / Taproot: explicar witness */}
-      {scriptType !== 'p2pkh' && (
+      {(scriptType === 'p2wpkh' || scriptType === 'p2tr') && (
         <div className="script-section">
           <span className="section-label">
             {scriptType === 'p2wpkh' ? 'Witness (SegWit v0)' : 'Witness (Taproot)'}
@@ -401,6 +475,7 @@ export function ScriptExplorer() {
             { name: 'OP_HASH160', hex: '0xa9', desc: 'SHA-256 + RIPEMD-160' },
             { name: 'OP_EQUALVERIFY', hex: '0x88', desc: 'Compara y falla si no son iguales' },
             { name: 'OP_CHECKSIG', hex: '0xac', desc: 'Verifica firma ECDSA/Schnorr' },
+            { name: 'OP_CHECKMULTISIG', hex: '0xae', desc: 'Verifica m-of-n (consume un dummy extra)' },
             { name: 'OP_0', hex: '0x00', desc: 'Apila un valor vacio (false)' },
             { name: 'OP_1', hex: '0x51', desc: 'Apila 1 (true / witness v1)' },
             { name: 'OP_EQUAL', hex: '0x87', desc: 'Compara dos items, deja true/false' },
