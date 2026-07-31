@@ -1,0 +1,174 @@
+/**
+ * Output descriptors — la "receta" completa y sin ambigüedades de una wallet.
+ *
+ * Un descriptor describe qué scripts controla una wallet y de qué claves salen.
+ * Para multisig es la pieza IMPRESCINDIBLE: sin él (todos los xpubs + la política)
+ * no se recuperan los fondos aunque tengas las semillas. Ejemplo:
+ *
+ *   wsh(sortedmulti(2,
+ *     [1a2b3c4d/48h/0h/0h/2h]xpub6ABC…/<0;1>/*,
+ *     [5e6f7a8b/48h/0h/0h/2h]xpub6DEF…/<0;1>/*,
+ *     [9c0d1e2f/48h/0h/0h/2h]xpub6GHI…/<0;1>/*
+ *   ))#checksum
+ *
+ * Aquí implementamos: el ordenado BIP67 (lo que hace `sortedmulti`), el checksum
+ * de descriptor (algoritmo de Bitcoin Core) y el ensamblado de la cadena.
+ */
+
+import { createMultisig, addressP2WSH } from './script';
+import { derivePath, getMultisigDerivationPath, type HDNode, type MultisigKey, type MultisigScriptType } from './hdwallet';
+import { compressPublicKey } from './secp256k1';
+
+// ─── BIP67: orden lexicográfico de claves ───────────────────
+/**
+ * BIP67: ordena las claves públicas por su valor de byte, de menor a mayor.
+ * `sortedmulti` aplica esto a las claves DERIVADAS en cada índice antes de
+ * construir el script, de modo que el orden en que los cosignatarios se listan
+ * en el descriptor deja de importar para reconstruir las mismas direcciones.
+ */
+export function sortPubKeysBIP67(pubKeys: Uint8Array[]): Uint8Array[] {
+  return [...pubKeys].sort(comparePubKeys);
+}
+
+function comparePubKeys(a: Uint8Array, b: Uint8Array): number {
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    if (a[i] !== b[i]) return a[i] - b[i];
+  }
+  return a.length - b.length;
+}
+
+// ─── Checksum de descriptor (algoritmo de Bitcoin Core) ─────
+/**
+ * Cada descriptor lleva un checksum de 8 caracteres (#xxxxxxxx) que detecta si
+ * se copió mal. El algoritmo es el de Bitcoin Core: mapea cada carácter a través
+ * de un INPUT_CHARSET (clase alta + posición baja) y acumula un polymod de 40
+ * bits, emitiendo el resultado con el charset de bech32.
+ *
+ * Referencia: src/script/descriptor.cpp (DescriptorChecksum).
+ */
+const INPUT_CHARSET =
+  '0123456789()[],\'/*abcdefgh@:$%{}IJKLMNOPQRSTUVWXYZ&+-.;<=>?!^_|~ijklmnopqrstuvwxyzABCDEFGH`#"\\ ';
+const CHECKSUM_CHARSET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l'; // el mismo de bech32
+
+const MASK35 = 0x7ffffffffn; // 35 bits bajos
+
+function descriptorPolyMod(c: bigint, val: number): bigint {
+  const c0 = c >> 35n;
+  c = ((c & MASK35) << 5n) ^ BigInt(val);
+  if (c0 & 1n) c ^= 0xf5dee51989n;
+  if (c0 & 2n) c ^= 0xa9fdca3312n;
+  if (c0 & 4n) c ^= 0x1bab10e32dn;
+  if (c0 & 8n) c ^= 0x3706b1677an;
+  if (c0 & 16n) c ^= 0x644d626ffdn;
+  return c;
+}
+
+/**
+ * Calcula los 8 caracteres del checksum de un descriptor (sin el '#').
+ * Devuelve '' si el descriptor contiene un carácter fuera del INPUT_CHARSET.
+ */
+export function descriptorChecksum(descriptor: string): string {
+  let c = 1n;
+  let cls = 0;       // acumulador de las "clases" (parte alta)
+  let clscount = 0;
+
+  for (const ch of descriptor) {
+    const pos = INPUT_CHARSET.indexOf(ch);
+    if (pos === -1) return '';
+    c = descriptorPolyMod(c, pos & 31);        // símbolo por la posición baja
+    cls = cls * 3 + (pos >> 5);                // acumula la clase
+    if (++clscount === 3) {
+      c = descriptorPolyMod(c, cls);           // un símbolo extra cada 3 caracteres
+      cls = 0;
+      clscount = 0;
+    }
+  }
+  if (clscount > 0) c = descriptorPolyMod(c, cls);
+  for (let j = 0; j < 8; j++) c = descriptorPolyMod(c, 0);
+  c ^= 1n; // evita que añadir ceros no cambie el checksum
+
+  let ret = '';
+  for (let j = 0; j < 8; j++) {
+    ret += CHECKSUM_CHARSET[Number((c >> BigInt(5 * (7 - j))) & 31n)];
+  }
+  return ret;
+}
+
+/** Añade el checksum a un descriptor: `desc` → `desc#xxxxxxxx`. */
+export function withChecksum(descriptor: string): string {
+  return `${descriptor}#${descriptorChecksum(descriptor)}`;
+}
+
+// ─── Ensamblado de descriptores multisig ────────────────────
+/**
+ * Construye un descriptor P2WSH sortedmulti a partir de las expresiones de clave
+ * de los cosignatarios (con su origen), añadiendo el sufijo de derivación y el
+ * checksum.
+ *
+ * @param keys  claves de cosignatario (deriveMultisigKey), con `[origen]xpub`.
+ * @param m     umbral de firmas.
+ * @param chain '0' recepción, '1' cambio, o '<0;1>' (multipath, ambas).
+ */
+export function buildWshSortedMulti(
+  keys: MultisigKey[],
+  m: number,
+  chain: '0' | '1' | '<0;1>' = '<0;1>',
+): string {
+  if (m < 1 || m > keys.length) throw new Error(`m (umbral) debe estar entre 1 y ${keys.length}`);
+  const inner = keys.map(k => `${k.keyExpression}/${chain}/*`).join(',');
+  return withChecksum(`wsh(sortedmulti(${m},${inner}))`);
+}
+
+// ─── Derivación de dirección desde el descriptor ────────────
+/**
+ * Deriva la dirección P2WSH del multisig en un índice concreto.
+ *
+ * OJO: esta versión deriva desde las SEMILLAS (masters privados) porque en el
+ * demo las tenemos todas. Una wallet watch-only real derivaría desde los xpubs
+ * de cada cosignatario (CKDpub, derivación pública) — pendiente para más adelante.
+ * El resultado es el mismo: se deriva cada clave al índice, se ordenan por BIP67
+ * (eso es `sortedmulti`), se monta el witnessScript m-of-n y se hashea a P2WSH.
+ */
+export function deriveMultisigAddress(
+  masters: HDNode[],
+  m: number,
+  scriptType: MultisigScriptType,
+  change: 0 | 1,
+  index: number,
+  account = 0,
+  coinType = 0,
+  mainnet = true,
+): { address: string; witnessScriptHex: string } {
+  const accountPath = getMultisigDerivationPath(scriptType, account, coinType);
+
+  const pubKeys = masters.map(master => {
+    const { node } = derivePath(master, `${accountPath}/${change}/${index}`);
+    return hexToBytes(compressNode(node));
+  });
+
+  const sorted = sortPubKeysBIP67(pubKeys);
+  const witnessScript = createMultisig(m, sorted);
+  return {
+    address: addressP2WSH(witnessScript, mainnet),
+    witnessScriptHex: bytesToHex(witnessScript),
+  };
+}
+
+// ─── Utilidades ─────────────────────────────────────────────
+
+function compressNode(node: HDNode): string {
+  return compressPublicKey(node.publicKey);
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
