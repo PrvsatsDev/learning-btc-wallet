@@ -1,0 +1,340 @@
+/* MultisigExplorer — Fase 4, sección interactiva */
+
+.mse {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+/* ─── Cabecera ─────────────────────────────────────────── */
+
+.mse-header { margin-bottom: 1.25rem; }
+
+.mse-phase-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f7931a;
+  background: #f7931a1a;
+  border: 1px solid #f7931a33;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  margin-bottom: 0.75rem;
+}
+
+.mse-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+.mse-subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.mse code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.86em;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+  color: #e2e8f0;
+}
+
+.mse strong { color: #f1f5f9; }
+
+/* ─── Aviso ────────────────────────────────────────────── */
+
+.mse-warn {
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  background: #2a2412;
+  border: 1px solid #eab30833;
+  border-left: 4px solid #eab308;
+  border-radius: 8px;
+  font-size: 0.83rem;
+  line-height: 1.5;
+  color: #fde7c8;
+}
+
+/* ─── Controles ────────────────────────────────────────── */
+
+.mse-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem 1.5rem;
+  align-items: end;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.mse-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mse-control-label {
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.mse-control-label strong { color: #f7931a; font-family: ui-monospace, monospace; }
+
+.mse-control input[type='range'] {
+  width: 100%;
+  accent-color: #f7931a;
+  cursor: pointer;
+}
+
+.mse-toggle {
+  display: flex;
+  gap: 0.25rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.2rem;
+}
+
+.mse-toggle button {
+  flex: 1;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.78rem;
+  font-family: ui-monospace, monospace;
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mse-toggle button.active {
+  background: #f7931a22;
+  color: #f7931a;
+  font-weight: 600;
+}
+
+.mse-regen {
+  align-self: end;
+  padding: 0.55rem 0.85rem;
+  font-size: 0.82rem;
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.mse-regen:hover { background: #334155; }
+
+/* ─── Línea de esquema + carga ─────────────────────────── */
+
+.mse-scheme-line {
+  margin: 1rem 0 0.25rem;
+  font-size: 0.95rem;
+  color: #cbd5e1;
+}
+
+.mse-scheme-line strong {
+  color: #f7931a;
+  font-family: ui-monospace, monospace;
+  font-size: 1.05rem;
+}
+
+.mse-scheme-note { color: #94a3b8; font-size: 0.85rem; }
+
+.mse-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+  padding: 0.85rem 1rem;
+  background: #0c2f3a;
+  border: 1px solid #22d3ee33;
+  border-radius: 8px;
+  color: #67e8f9;
+  font-size: 0.85rem;
+}
+
+.mse-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #22d3ee44;
+  border-top-color: #22d3ee;
+  border-radius: 50%;
+  animation: mse-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes mse-spin { to { transform: rotate(360deg); } }
+
+/* ─── Secciones ────────────────────────────────────────── */
+
+.mse-section { margin-top: 1.75rem; }
+
+.mse-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.6rem;
+}
+
+.mse-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.mse-label-row .mse-label { margin-bottom: 0; }
+
+.mse-copy {
+  font-size: 0.74rem;
+  padding: 0.3rem 0.7rem;
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mse-copy:hover { background: #334155; color: #e2e8f0; }
+
+/* ─── Cosignatarios ────────────────────────────────────── */
+
+.mse-cosigners {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.mse-cosigner {
+  display: flex;
+  gap: 0.75rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.mse-cosigner-idx {
+  flex-shrink: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #f7931a;
+  font-family: ui-monospace, monospace;
+}
+
+.mse-cosigner-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.mse-cosigner-meta {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-bottom: 0.35rem;
+}
+
+.mse-cosigner-key {
+  display: block;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 0.5rem 0.6rem;
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: #7dd3fc;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* ─── Descriptor ───────────────────────────────────────── */
+
+.mse-descriptor {
+  background: #0f172a;
+  border: 1px solid #f7931a44;
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  overflow-x: auto;
+}
+
+.mse-descriptor code {
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.mse-hint {
+  margin: 0.6rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: #94a3b8;
+}
+
+/* ─── Direcciones ──────────────────────────────────────── */
+
+.mse-addresses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.mse-addr {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.6rem 0.85rem;
+}
+
+.mse-addr-path {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-family: ui-monospace, monospace;
+  color: #64748b;
+  min-width: 3rem;
+}
+
+.mse-addr-value {
+  font-size: 0.8rem;
+  color: #f7931a;
+  background: transparent;
+  border: none;
+  padding: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+/* ─── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 620px) {
+  .mse-controls { grid-template-columns: 1fr; }
+  .mse-regen { align-self: stretch; }
+}

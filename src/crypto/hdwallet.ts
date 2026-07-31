@@ -421,6 +421,7 @@ export interface MultisigKey {
   path: string;            // ruta BIP48 usada, p.ej. m/48'/0'/0'/2'
   xpub: string;            // extended public key del nodo de cuenta
   keyExpression: string;   // [fingerprint/48h/0h/0h/2h]xpub  (listo para el descriptor)
+  node: HDNode;            // el nodo de cuenta (para derivar direcciones sin rehacer los niveles hardened)
 }
 
 /**
@@ -446,7 +447,7 @@ export function deriveMultisigKey(
   const originPath = path.replace(/^m\//, '').replace(/'/g, 'h');
   const keyExpression = `[${fp}/${originPath}]${xpub}`;
 
-  return { fingerprint: fp, path, xpub, keyExpression };
+  return { fingerprint: fp, path, xpub, keyExpression, node };
 }
 
 // ─── PBKDF2-HMAC-SHA512 ────────────────────────────────────

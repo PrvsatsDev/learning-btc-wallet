@@ -16,7 +16,7 @@
  */
 
 import { createMultisig, addressP2WSH } from './script';
-import { derivePath, getMultisigDerivationPath, type HDNode, type MultisigKey, type MultisigScriptType } from './hdwallet';
+import { derivePath, deriveChild, getMultisigDerivationPath, type HDNode, type MultisigKey, type MultisigScriptType } from './hdwallet';
 import { compressPublicKey } from './secp256k1';
 
 // ─── BIP67: orden lexicográfico de claves ───────────────────
@@ -122,13 +122,52 @@ export function buildWshSortedMulti(
 
 // ─── Derivación de dirección desde el descriptor ────────────
 /**
- * Deriva la dirección P2WSH del multisig en un índice concreto.
+ * Monta la dirección P2WSH de un multisig a partir de las claves públicas YA
+ * derivadas de un índice. Es la parte BARATA (sin curva elíptica): ordena por
+ * BIP67 (eso es `sortedmulti`), construye el witnessScript m-of-n y lo hashea.
+ * Cambiar el umbral `m` solo re-ejecuta esto, no la derivación.
+ */
+export function p2wshMultisigAddress(
+  pubKeys: Uint8Array[],
+  m: number,
+  mainnet = true,
+): { address: string; witnessScriptHex: string } {
+  const sorted = sortPubKeysBIP67(pubKeys);
+  const witnessScript = createMultisig(m, sorted);
+  return {
+    address: addressP2WSH(witnessScript, mainnet),
+    witnessScriptHex: bytesToHex(witnessScript),
+  };
+}
+
+/**
+ * Deriva, para los primeros `count` índices, las claves públicas de cada
+ * cosignatario, PARTIENDO de sus nodos de CUENTA (no de la semilla). Deriva el
+ * nodo `change` una sola vez por cosignatario y de ahí cada índice: es la parte
+ * cara (curva elíptica), así que se minimiza. Devuelve, por índice, las pubkeys
+ * SIN ordenar — el ordenado BIP67 y el umbral m se aplican después (barato).
+ */
+export function deriveIndexPubkeys(
+  accountNodes: HDNode[],
+  change: 0 | 1,
+  count: number,
+): Uint8Array[][] {
+  const changeNodes = accountNodes.map(account => deriveChild(account, change, false));
+  const perIndex: Uint8Array[][] = [];
+  for (let i = 0; i < count; i++) {
+    perIndex.push(
+      changeNodes.map(cn => hexToBytes(compressPublicKey(deriveChild(cn, i, false).publicKey))),
+    );
+  }
+  return perIndex;
+}
+
+/**
+ * Deriva la dirección P2WSH del multisig en un índice, desde las SEMILLAS.
  *
- * OJO: esta versión deriva desde las SEMILLAS (masters privados) porque en el
- * demo las tenemos todas. Una wallet watch-only real derivaría desde los xpubs
- * de cada cosignatario (CKDpub, derivación pública) — pendiente para más adelante.
- * El resultado es el mismo: se deriva cada clave al índice, se ordenan por BIP67
- * (eso es `sortedmulti`), se monta el witnessScript m-of-n y se hashea a P2WSH.
+ * OJO: deriva desde los masters privados porque en el demo tenemos las semillas.
+ * Una wallet watch-only real derivaría desde los xpubs (CKDpub, derivación
+ * pública) — pendiente. El resultado numérico es el mismo.
  */
 export function deriveMultisigAddress(
   masters: HDNode[],
@@ -141,18 +180,11 @@ export function deriveMultisigAddress(
   mainnet = true,
 ): { address: string; witnessScriptHex: string } {
   const accountPath = getMultisigDerivationPath(scriptType, account, coinType);
-
   const pubKeys = masters.map(master => {
     const { node } = derivePath(master, `${accountPath}/${change}/${index}`);
     return hexToBytes(compressNode(node));
   });
-
-  const sorted = sortPubKeysBIP67(pubKeys);
-  const witnessScript = createMultisig(m, sorted);
-  return {
-    address: addressP2WSH(witnessScript, mainnet),
-    witnessScriptHex: bytesToHex(witnessScript),
-  };
+  return p2wshMultisigAddress(pubKeys, m, mainnet);
 }
 
 // ─── Utilidades ─────────────────────────────────────────────
