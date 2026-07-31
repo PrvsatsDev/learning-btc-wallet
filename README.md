@@ -4,6 +4,30 @@ Wallet de Bitcoin didáctica construida desde cero para aprender criptografía y
 
 Inspirada en [Sparrow Wallet](https://sparrowwallet.com/) y [Liana Wallet](https://wizardsardine.com/liana/).
 
+## ⚠️ Aviso — herramienta de aprendizaje, sin garantías
+
+Este es un **proyecto de aprendizaje**. Todo el código se publica "TAL CUAL" (*as is*),
+**sin garantía de ningún tipo** y con criptografía implementada desde cero con fines
+didácticos, no auditada para producción. **El autor no se hace responsable** de ninguna
+pérdida, daño o consecuencia derivada de su uso.
+
+Su propósito es **entender** cómo funciona una wallet Bitcoin por dentro — no custodiar
+fondos ni operar en producción. **No introduzcas nunca una seed phrase que custodie fondos
+reales en un dispositivo conectado a internet**, ni aquí ni en ninguna otra web o app.
+
+En particular, la herramienta **Entropy Auditor** es material didáctico. Si aun así alguien
+se aventura a usarla con palabras reales, tómala **solo como inspiración** para tu propia
+solución; y si de todos modos vas a ejecutarla con una semilla real, hazlo como mínimo así:
+
+1. **Revisa y audita el código tú mismo** antes de confiar en él.
+2. **Clona el repositorio** y ejecútalo desde la fuente que has revisado.
+3. **Hazlo en un equipo desconectado** (*air-gapped*) — ver
+   [Uso en equipo air-gapped](#uso-en-equipo-air-gapped).
+
+Al usar este software aceptas que lo haces **bajo tu entera responsabilidad**. Se distribuye
+bajo licencia [MIT](LICENSE), que incluye la cláusula estándar de exención de garantías y
+responsabilidad.
+
 ## Stack
 
 - **TypeScript + React** — frontend interactivo con tipado explícito
@@ -70,6 +94,7 @@ npm run tauri dev
 | **Seed Manager** | Generar/importar mnemónico 12/24 palabras, backup, derivar direcciones | `src/components/WalletSetup.tsx` |
 | **Balance Checker** | Consulta de UTXOs y saldo vía API mempool.space | `src/components/BalanceChecker.tsx`, `src/api/mempool.ts` |
 | **Transaction Builder** | Selección de UTXOs, construcción de tx, firma BIP143 + ECDSA, broadcast | `src/components/TxBuilder.tsx`, `src/crypto/sighash.ts` |
+| **Entropy Auditor** | Reconstruye la entropía cruda de un mnemónico offline, verifica checksum y aplica tests "a ojo" de aleatoriedad (inspirado en el caso ColdCard 2026) | `src/components/EntropyAuditor.tsx`, `src/crypto/entropy-audit.ts` |
 
 El Transaction Builder cubre el flujo completo end-to-end:
 
@@ -81,9 +106,83 @@ El Transaction Builder cubre el flujo completo end-to-end:
 
 Sanity check del sighash cross-verificado con Python/Node crypto: `src/crypto/sighash.test.ts`.
 
+#### Entropy Auditor
+
+Herramienta nacida a raíz del caso **ColdCard (2026)**, donde Coinkite avisó de semillas
+generadas con **~72 bits de entropía en vez de 128**. Reconstruye offline los bits crudos
+de un mnemónico (palabra → índice → 11 bits → entropía + checksum), verifica el checksum
+BIP39 con el SHA-256 de la Fase 1, y aplica una batería de tests estadísticos.
+
+**Qué SÍ hace:** detectar defectos *groseros* — constantes, mitades repetidas, sesgo de
+bits extremo, baja diversidad de bytes. La clase de "firma" que un generador roto podría
+dejar.
+
+**Qué NO hace:** medir ni certificar la entropía. La entropía es una propiedad del
+*proceso que generó* la semilla, no de la semilla en sí — un valor de 128 bits es idéntico
+venga de un RNG perfecto o de uno roto. **Pasar todos los tests no prueba que una semilla
+sea segura**, y la reducción sutil tipo ColdCard (bytes de aspecto aleatorio pero de un
+espacio pequeño) **no es detectable** analizando una sola semilla.
+
+**El caso ColdCard, técnicamente:** fue un fallback silencioso a un PRNG software — el
+firmware debía usar el TRNG hardware (`ckcc.rng_bytes()`) pero, tras migrar a libNgU en
+2021, el símbolo resolvió al PRNG de MicroPython (`ngu.random.bytes()`); una guarda de
+preprocesador mal escrita impidió que el build abortara. Espacio efectivo resultante:
+~40 bits en Mk3, ~72 bits en Mk4/Q/Mk5 (corregido en Mk4/Mk5 v5.6.0 y Q v1.5.0Q). Como
+el PRNG produce salida de ancho completo, **no deja firma en los bytes** y solo se
+detectaría reconstruyendo el PRNG y buscando por fuerza bruta en su espacio reducido — de
+ahí que Coinkite no dé un método de verificación. Referencias:
+[aviso Mk3](https://blog.coinkite.com/coldcard-mk3-seed-generation-warning/) ·
+[backgrounder técnico](https://blog.coinkite.com/entropy-technical-backgrounder/).
+
+> Recuerda el **aviso** del principio: es material didáctico; para palabras reales, tómalo
+> como inspiración y, en su caso, sigue el
+> [uso en equipo air-gapped](#uso-en-equipo-air-gapped).
+
+## Uso en equipo air-gapped
+
+La herramienta **Entropy Auditor** funciona 100% en local: no hace ninguna llamada de red,
+no carga recursos externos (fuentes, analytics, CDN) y todo el cálculo usa criptografía
+propia con la wordlist BIP39 embebida en el bundle. Aun siendo una herramienta de
+aprendizaje, si alguien la ejecuta con una semilla real debe hacerlo en un equipo
+desconectado. Como `npm install` sí necesita red, el flujo es:
+
+```bash
+# 1) En una máquina CON red:
+git clone https://github.com/PrvsatsDev/learning-btc-wallet.git && cd learning-btc-wallet
+npm ci            # instala las versiones EXACTAS del package-lock.json
+
+# 2) Copia la carpeta ENTERA (incluido node_modules) por USB al equipo air-gapped.
+
+# 3) En el equipo desconectado, sin red:
+npm run dev       # servidor local en localhost, sin telemetría
+```
+
+`npm ci` (en vez de `npm install`) instala exactamente lo fijado en el lockfile, sin
+resolver versiones nuevas — reproducible y auditable.
+
+**Verificación que puedes hacer tú mismo, sin leer una línea de código:**
+
+- Abre las **DevTools del navegador → pestaña Network** y usa el Auditor: al teclear la
+  semilla no debe aparecer **ninguna** petición (0 requests). Es la prueba definitiva de
+  que nada sale de la máquina.
+- No necesitas Tauri (la capa Rust): con `npm run dev` en el navegador basta, y hay menos
+  superficie que auditar.
+- Evita clicar los enlaces externos (mempool.space, referencias) mientras la semilla esté
+  en pantalla — son navegaciones que sí saldrían a Internet si hubiera red.
+
+**Sobre dependencias de terceros:** el código propio no hace ninguna llamada de red, y las
+dependencias directas (React, react-dom, Tauri) tampoco lo hacen en el navegador. Nadie
+puede garantizar al 100% el árbol transitivo entero de npm, pero el air-gap es precisamente
+la garantía: sin red, aunque algo lo intentara, nada puede salir.
+
 ## Hoja de ruta
 
 - [x] **Fase 1** — Fundamentos criptográficos (SHA-256, RIPEMD-160, secp256k1, Base58Check)
 - [x] **Fase 2** — Primitivas Bitcoin (firmas, UTXOs, transacciones, scripts, HD Wallets)
 - [ ] **Fase 3** — Wallet funcional (seed phrase, derivación, conexión a red, broadcast)
 - [ ] **Fase 4** — UI visual estilo Sparrow/Liana
+
+## Licencia
+
+[MIT](LICENSE) © 2026 psatsdev. Software libre, sin garantías (ver el **aviso** al principio
+del README).

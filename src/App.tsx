@@ -12,12 +12,14 @@ import { HdWalletExplorer } from './components/HdWalletExplorer';
 import { WalletSetup } from './components/WalletSetup';
 import { BalanceChecker } from './components/BalanceChecker';
 import { TxBuilder } from './components/TxBuilder';
+import { EntropyAuditor } from './components/EntropyAuditor';
+import { DisclaimerBanner } from './components/DisclaimerBanner';
 import './App.css';
 
 type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
   | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
-  | 'wallet-setup' | 'balance' | 'tx-builder';
+  | 'wallet-setup' | 'balance' | 'tx-builder' | 'entropy-audit';
 
 interface Phase {
   id: string;
@@ -55,6 +57,7 @@ const phases: Phase[] = [
       { id: 'wallet-setup', label: 'Seed Manager', component: WalletSetup },
       { id: 'balance', label: 'Balance', component: BalanceChecker },
       { id: 'tx-builder', label: 'Transacción', component: TxBuilder },
+      { id: 'entropy-audit', label: 'Entropy Auditor', component: EntropyAuditor },
     ],
   },
 ];
@@ -69,6 +72,7 @@ function App() {
 
   return (
     <div className="app">
+      <DisclaimerBanner />
       <nav className="app-nav">
         <span className="nav-brand">BTC Wallet</span>
         <span className="nav-current-label">{activeLessonLabel}</span>
@@ -102,6 +106,17 @@ function App() {
         </div>
       </nav>
       <ActiveComponent />
+
+      <footer className="app-footer">
+        <span>Proyecto educativo de código abierto (MIT) ·</span>
+        <a
+          href="https://github.com/PrvsatsDev/learning-btc-wallet"
+          target="_blank"
+          rel="noreferrer noopener"
+        >
+          Ver, clonar o auditar en GitHub
+        </a>
+      </footer>
     </div>
   );
 }

@@ -13,7 +13,7 @@
   background: #1e293b;
   border-bottom: 1px solid #334155;
   position: sticky;
-  top: 0;
+  top: 2.5rem;              /* justo debajo de la banda de aviso global */
   z-index: 10;
   flex-wrap: wrap;
 }
@@ -87,6 +87,33 @@
   color: #f7931a;
   border-color: #f7931a44;
   font-weight: 600;
+}
+
+/* ─── Pie global ──────────────────────────────────────── */
+
+.app-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+  padding: 2rem 1.5rem 2.5rem;
+  border-top: 1px solid #1e293b;
+  color: #64748b;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.app-footer a {
+  color: #60a5fa;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app-footer a:hover {
+  color: #93c5fd;
 }
 
 /* ─── Responsive: móvil ──────────────────────────────── */
