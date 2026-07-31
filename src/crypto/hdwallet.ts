@@ -22,6 +22,7 @@ import { hmacSha512, bytesToHex, bigintToBytes, bytesToBigint } from './hmac';
 import { N, getPublicKey, compressPublicKey, type Point } from './secp256k1';
 import { BIP39_WORDLIST } from './bip39-wordlist';
 import { addressP2WPKH, addressP2TR } from './script';
+import { base58Encode } from './base58';
 
 // ─── Tipos ──────────────────────────────────────────────────
 
@@ -327,6 +328,125 @@ export function getAddress(node: HDNode, purpose: 44 | 84 | 86, mainnet = true):
     default:
       return '?';
   }
+}
+
+// ─── BIP48 + descriptores (multisig) ───────────────────────
+/**
+ * BIP48 es la ruta estándar para claves de MULTISIG:
+ *   m/48'/coin'/account'/script_type'
+ *
+ * El último nivel (hardened) indica el tipo de script del multisig:
+ *   1' → P2SH-P2WSH (multisig anidado, dirección 3...)
+ *   2' → P2WSH nativo (bc1q..., el estándar hoy)
+ *   3' → P2TR (Taproot multisig — convención más reciente)
+ *
+ * Ojo: BIP48 sólo llega al nivel de la CUENTA. Lo que se comparte con los demás
+ * cosignatarios es la xpub de ESE nodo (más su origen); cada uno añade luego
+ * /0/* (recepción) y /1/* (cambio) por su cuenta al construir el descriptor.
+ */
+export type MultisigScriptType = 'p2sh-p2wsh' | 'p2wsh' | 'p2tr';
+
+const BIP48_SCRIPT_TYPE: Record<MultisigScriptType, number> = {
+  'p2sh-p2wsh': 1,
+  'p2wsh': 2,
+  'p2tr': 3,
+};
+
+export function getMultisigDerivationPath(
+  scriptType: MultisigScriptType,
+  account: number = 0,
+  coinType: number = 0,
+): string {
+  return `m/48'/${coinType}'/${account}'/${BIP48_SCRIPT_TYPE[scriptType]}'`;
+}
+
+// Versiones de extended key (BIP32). xpub/tpub = claves PÚBLICAS extendidas.
+const XPUB_VERSION_MAINNET = 0x0488b21e; // "xpub"
+const XPUB_VERSION_TESTNET = 0x043587cf; // "tpub"
+
+/**
+ * Fingerprint (huella) de un nodo: primeros 4 bytes de Hash160(pubKey comprimida).
+ * El fingerprint del MASTER identifica de qué semilla sale una clave en un descriptor.
+ */
+export function fingerprint(node: HDNode): string {
+  const pubHex = compressPublicKey(node.publicKey);
+  return ripemd160Hex(hexToBytes(sha256(hexToBytes(pubHex)).hash)).slice(0, 8);
+}
+
+/**
+ * Serializa un nodo como extended public key (xpub) en Base58Check.
+ *
+ * Estructura (78 bytes + 4 de checksum):
+ *   version(4) depth(1) parentFingerprint(4) childNumber(4) chainCode(32) pubKey(33)
+ *
+ * Solo se serializa la parte PÚBLICA: la xpub permite generar direcciones y auditar,
+ * pero NO gastar. Es justo lo que se comparte entre cosignatarios de un multisig.
+ */
+export function serializeXpub(node: HDNode, mainnet = true): string {
+  const version = mainnet ? XPUB_VERSION_MAINNET : XPUB_VERSION_TESTNET;
+  const data = new Uint8Array(78);
+  let o = 0;
+
+  data[o++] = (version >>> 24) & 0xff;
+  data[o++] = (version >>> 16) & 0xff;
+  data[o++] = (version >>> 8) & 0xff;
+  data[o++] = version & 0xff;
+
+  data[o++] = node.depth & 0xff;
+
+  data.set(hexToBytes(node.parentFingerprint), o); o += 4;
+
+  const idx = node.index >>> 0;
+  data[o++] = (idx >>> 24) & 0xff;
+  data[o++] = (idx >>> 16) & 0xff;
+  data[o++] = (idx >>> 8) & 0xff;
+  data[o++] = idx & 0xff;
+
+  data.set(node.chainCode, o); o += 32;
+
+  data.set(hexToBytes(compressPublicKey(node.publicKey)), o); o += 33;
+
+  // Checksum: primeros 4 bytes de SHA-256(SHA-256(data))
+  const checksum = hexToBytes(sha256(hexToBytes(sha256(data).hash)).hash).slice(0, 4);
+
+  const full = new Uint8Array(82);
+  full.set(data, 0);
+  full.set(checksum, 78);
+  return base58Encode(full);
+}
+
+/** Una clave de cosignatario lista para meter en un descriptor multisig. */
+export interface MultisigKey {
+  fingerprint: string;     // huella del MASTER (el origen de esta clave)
+  path: string;            // ruta BIP48 usada, p.ej. m/48'/0'/0'/2'
+  xpub: string;            // extended public key del nodo de cuenta
+  keyExpression: string;   // [fingerprint/48h/0h/0h/2h]xpub  (listo para el descriptor)
+}
+
+/**
+ * Deriva la clave BIP48 de un cosignatario y devuelve su "expresión de clave" para
+ * descriptores, con el origen entre corchetes:  [masterFP/48h/coin h/account h/type h]xpub
+ *
+ * El descriptor completo (wsh(sortedmulti(...))) es el siguiente paso; aquí se
+ * produce cada pieza [origen]xpub. La ruta del origen usa 'h' para hardened (forma
+ * moderna de descriptor, equivalente a la comilla y sin problemas al escaparla).
+ */
+export function deriveMultisigKey(
+  master: HDNode,
+  scriptType: MultisigScriptType,
+  account: number = 0,
+  coinType: number = 0,
+  mainnet = true,
+): MultisigKey {
+  const path = getMultisigDerivationPath(scriptType, account, coinType);
+  const { node } = derivePath(master, path);
+
+  const fp = fingerprint(master);
+  const xpub = serializeXpub(node, mainnet);
+  const originPath = path.replace(/^m\//, '').replace(/'/g, 'h');
+  const keyExpression = `[${fp}/${originPath}]${xpub}`;
+
+  return { fingerprint: fp, path, xpub, keyExpression };
 }
 
 // ─── PBKDF2-HMAC-SHA512 ────────────────────────────────────
