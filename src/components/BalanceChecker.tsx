@@ -131,7 +131,7 @@ export function BalanceChecker() {
         const { node } = derivePath(master, path);
         addresses.push({
           path,
-          address: getAddress(node, 84),
+          address: getAddress(node, 84, network === 'mainnet'),
           info: null,
           utxos: [],
           loading: true,

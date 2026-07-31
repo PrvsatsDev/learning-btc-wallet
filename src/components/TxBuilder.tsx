@@ -197,7 +197,7 @@ export function TxBuilder() {
       for (let i = 0; i < 5; i++) {
         const path = getDerivationPath(84, 0, false, i);
         const { node } = derivePath(master, path);
-        const address = getAddress(node, 84);
+        const address = getAddress(node, 84, network === 'mainnet');
 
         const utxos = await getAddressUtxos(address, network);
         for (const u of utxos) {

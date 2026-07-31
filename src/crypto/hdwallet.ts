@@ -301,8 +301,14 @@ export function getDerivationPath(
   return `m/${purpose}'/0'/${account}'/${change ? 1 : 0}/${index}`;
 }
 
-/** Genera la dirección correcta según el purpose */
-export function getAddress(node: HDNode, purpose: 44 | 84 | 86): string {
+/**
+ * Genera la dirección correcta según el purpose.
+ *
+ * El parámetro `mainnet` sólo cambia el HRP del bech32 (bc vs tb) — la clave
+ * derivada es la misma. Para consultar UTXOs reales en testnet4/signet hace
+ * falta usar `mainnet=false` o la API de mempool.space devuelve 400.
+ */
+export function getAddress(node: HDNode, purpose: 44 | 84 | 86, mainnet = true): string {
   const pubKeyHex = compressPublicKey(node.publicKey);
   const pubKeyHash = ripemd160Hex(hexToBytes(sha256(hexToBytes(pubKeyHex)).hash));
   const pubKeyHashBytes = hexToBytes(pubKeyHash);
@@ -312,11 +318,11 @@ export function getAddress(node: HDNode, purpose: 44 | 84 | 86): string {
       // P2PKH — devolvemos el hash con prefijo (necesitaría Base58Check para dirección real)
       return '1...' + pubKeyHash.slice(0, 8) + '(P2PKH)';
     case 84:
-      return addressP2WPKH(pubKeyHashBytes);
+      return addressP2WPKH(pubKeyHashBytes, mainnet);
     case 86: {
       // Taproot: x-only pubkey (sin tweak por simplicidad educativa)
       const xOnly = hexToBytes(node.publicKey!.x.toString(16).padStart(64, '0'));
-      return addressP2TR(xOnly);
+      return addressP2TR(xOnly, mainnet);
     }
     default:
       return '?';
