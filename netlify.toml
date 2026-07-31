@@ -1,0 +1,18 @@
+# Cabeceras de seguridad para el despliegue en Netlify.
+#
+# La CSP (Content-Security-Policy) restringe a qué destinos puede conectarse la
+# página: solo a sí misma y a mempool.space (que usan Balance Checker y
+# Transaction Builder). Aunque una dependencia de terceros estuviera comprometida,
+# el navegador bloquearía el envío de datos a cualquier otro host — defensa en
+# profundidad para una herramienta educativa que puede manejar seeds.
+#
+# Nota: no se define [build] a propósito, para no pisar la configuración de build
+# que ya tienes en el panel de Netlify. Este archivo solo añade cabeceras.
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Content-Security-Policy = "default-src 'self'; connect-src 'self' https://mempool.space; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
