@@ -60,10 +60,16 @@ export const OP = {
   OP_HASH160: 0xa9,
   OP_CHECKSIG: 0xac,
   OP_CHECKMULTISIG: 0xae,
+  // Taproot (BIP342): reemplaza a OP_CHECKMULTISIG. En lugar de verificar todas
+  // las firmas de golpe (con el bug del dummy), suma 1 a un contador por cada
+  // firma válida. El multisig k-of-n queda:
+  //   <pk1> CHECKSIG <pk2> CHECKSIGADD … <pkn> CHECKSIGADD <k> NUMEQUAL
+  OP_CHECKSIGADD: 0xba,
 
   // Comparison
   OP_EQUAL: 0x87,
   OP_EQUALVERIFY: 0x88,
+  OP_NUMEQUAL: 0x9c,   // ¿dos números son iguales? (para el umbral k del multisig Taproot)
 } as const;
 
 // Mapeo inverso para mostrar nombres
@@ -289,6 +295,58 @@ export function executeScript(
               n.toString(16).padStart(2, '0'),
             ],
             produced: [ok ? '01' : '00'],
+          });
+          break;
+        }
+
+        case OP.OP_CHECKSIGADD: {
+          // Pila esperada (de abajo a arriba): <sig> <n> <pubkey>.
+          // Desapila pubkey, luego el contador n, luego la firma.
+          //   - firma VACÍA → no verifica, deja n igual (esa clave no firmó).
+          //   - firma no vacía y válida → deja n+1.
+          //   - firma no vacía e inválida → el script FALLA (regla de Tapscript).
+          const pubKey = stack.pop()!;
+          const n = readScriptNum(stack.pop()!);
+          const sig = stack.pop()!;
+          let result = n;
+          if (sig.length === 0) {
+            result = n; // clave no firmada: se salta sin verificar
+          } else {
+            const valid = checkSigFn ? checkSigFn(sig, pubKey) : true;
+            if (!valid) {
+              steps.push({
+                opcode, opcodeName: 'OP_CHECKSIGADD',
+                description: 'Firma no vacía INVÁLIDA → ¡FALLO! (Tapscript no la tolera)',
+                stack: stackToHex(), consumed: [bytesToHex(sig), bytesToHex(pubKey)], produced: [],
+              });
+              return { steps, success: false, finalStack: stackToHex(), error: 'OP_CHECKSIGADD: firma no vacía inválida' };
+            }
+            result = n + 1;
+          }
+          stack.push(encodeScriptNum(result));
+          steps.push({
+            opcode, opcodeName: 'OP_CHECKSIGADD',
+            description: sig.length === 0
+              ? `Firma vacía → contador sigue en ${n}`
+              : `Firma válida ✓ → contador ${n} → ${result}`,
+            stack: stackToHex(),
+            consumed: [bytesToHex(sig), n.toString(16).padStart(2, '0'), bytesToHex(pubKey)],
+            produced: [result.toString(16).padStart(2, '0')],
+          });
+          break;
+        }
+
+        case OP.OP_NUMEQUAL: {
+          const b = readScriptNum(stack.pop()!);
+          const a = readScriptNum(stack.pop()!);
+          const eq = a === b;
+          stack.push(new Uint8Array(eq ? [1] : []));
+          steps.push({
+            opcode, opcodeName: 'OP_NUMEQUAL',
+            description: `¿${a} = ${b}? → ${eq ? 'Sí ✓' : 'No'}`,
+            stack: stackToHex(),
+            consumed: [a.toString(16).padStart(2, '0'), b.toString(16).padStart(2, '0')],
+            produced: [eq ? '01' : '(empty)'],
           });
           break;
         }
@@ -610,6 +668,17 @@ function readScriptNum(item: Uint8Array): number {
   let value = 0;
   for (let i = 0; i < item.length; i++) value |= item[i] << (8 * i);
   return value;
+}
+
+/**
+ * Codifica un entero pequeño y no negativo como "script number" (LE, sin signo).
+ * El 0 es el item VACÍO; para 1..127 basta un byte. Suficiente para los contadores
+ * de OP_CHECKSIGADD (0..n con n ≤ 20).
+ */
+function encodeScriptNum(value: number): Uint8Array {
+  if (value === 0) return new Uint8Array(0);
+  if (value < 0 || value > 0x7f) throw new Error('encodeScriptNum solo maneja 0..127');
+  return new Uint8Array([value]);
 }
 
 function hexToBytes(hex: string): Uint8Array {
