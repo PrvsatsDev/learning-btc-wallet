@@ -17,6 +17,7 @@ import { MultisigGuide } from './components/MultisigGuide';
 import { MultisigExplorer } from './components/MultisigExplorer';
 import { PsbtExplorer } from './components/PsbtExplorer';
 import { TaprootMultisigExplorer } from './components/TaprootMultisigExplorer';
+import { BipReference } from './components/BipReference';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
 import './App.css';
 
@@ -24,7 +25,8 @@ type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
   | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
   | 'wallet-setup' | 'balance' | 'tx-builder' | 'entropy-audit'
-  | 'multisig-guide' | 'multisig-explorer' | 'psbt-explorer' | 'taproot-multisig';
+  | 'multisig-guide' | 'multisig-explorer' | 'psbt-explorer' | 'taproot-multisig'
+  | 'bip-reference';
 
 interface Phase {
   id: string;
@@ -73,6 +75,13 @@ const phases: Phase[] = [
       { id: 'multisig-explorer', label: 'Multisig Explorer', component: MultisigExplorer },
       { id: 'psbt-explorer', label: 'PSBT Explorer', component: PsbtExplorer },
       { id: 'taproot-multisig', label: 'Taproot Multisig', component: TaprootMultisigExplorer },
+    ],
+  },
+  {
+    id: 'reference',
+    label: 'Referencia',
+    lessons: [
+      { id: 'bip-reference', label: 'BIPs usados', component: BipReference },
     ],
   },
 ];
