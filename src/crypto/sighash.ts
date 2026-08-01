@@ -188,7 +188,7 @@ export function p2wpkhScriptCode(pubKeyHash20: Uint8Array): Uint8Array {
 
 // ─── Sighash BIP143 ─────────────────────────────────────────
 
-export interface SighashP2WPKHResult {
+export interface SighashBIP143Result {
   preimage: Uint8Array;       // los bytes exactos que se hashean
   preimageFields: TxField[];  // desglose anotado (para visualizar)
   sighash: Uint8Array;        // dSHA256(preimage) — lo que se firma
@@ -198,29 +198,38 @@ export interface SighashP2WPKHResult {
   scriptCode: Uint8Array;
 }
 
+/** Alias histórico: el resultado es el mismo para P2WPKH y P2WSH. */
+export type SighashP2WPKHResult = SighashBIP143Result;
+
 /**
- * Calcula el sighash BIP143 para un input P2WPKH concreto.
+ * Calcula el sighash BIP143 GENÉRICO para un input SegWit v0.
+ *
+ * Es el corazón común de P2WPKH y P2WSH: el preimage y el algoritmo son
+ * idénticos, lo ÚNICO que cambia es el `scriptCode`:
+ *   - P2WPKH: el P2PKH-equivalente de la pubkey (ver p2wpkhScriptCode).
+ *   - P2WSH:  el witnessScript ENTERO (p. ej. el script multisig m-of-n).
+ * Por eso este núcleo recibe el scriptCode ya montado y no sabe (ni le importa)
+ * de qué tipo de output viene. El multisig firma "sobre" su propio witnessScript.
  *
  * @param tx          - Transacción (con witness opcional; los witness NO se incluyen)
  * @param inputIndex  - Qué input estamos firmando
- * @param pubKeyHash  - hash160 de la pubkey del propietario del UTXO (20 B)
+ * @param scriptCode  - El scriptCode a comprometer (varint-prefijado dentro del preimage)
  * @param amount      - Valor del UTXO gastado, en satoshis (BIP143 obliga a incluirlo)
  * @param sighashType - Tipo de sighash (por defecto SIGHASH_ALL = 0x01)
  */
-export function computeSighashP2WPKH(
+export function computeSighashBIP143(
   tx: Transaction,
   inputIndex: number,
-  pubKeyHash: Uint8Array,
+  scriptCode: Uint8Array,
   amount: bigint,
   sighashType: number = SIGHASH.ALL,
-): SighashP2WPKHResult {
+): SighashBIP143Result {
   const input = tx.inputs[inputIndex];
   if (!input) throw new Error(`Input ${inputIndex} no existe`);
 
   const hashPrevouts = computeHashPrevouts(tx);
   const hashSequence = computeHashSequence(tx);
   const hashOutputs = computeHashOutputs(tx);
-  const scriptCode = p2wpkhScriptCode(pubKeyHash);
 
   // Campos anotados — se muestran en orden de aparición en el preimage
   const fields: TxField[] = [
@@ -251,13 +260,13 @@ export function computeSighashP2WPKH(
     {
       name: '5. scriptCode (len)',
       bytes: varInt(scriptCode.length),
-      description: `varint con la longitud (${scriptCode.length} = 0x19)`,
+      description: `varint con la longitud del scriptCode (${scriptCode.length} bytes)`,
       color: '#38bdf8',
     },
     {
       name: '5. scriptCode',
       bytes: scriptCode,
-      description: 'P2PKH equivalente: OP_DUP OP_HASH160 <h160> OP_EQUALVERIFY OP_CHECKSIG',
+      description: 'Script que se compromete al firmar (P2PKH-equiv. en P2WPKH, witnessScript en P2WSH)',
       color: '#38bdf8',
     },
     {
@@ -306,6 +315,38 @@ export function computeSighashP2WPKH(
     hashOutputs,
     scriptCode,
   };
+}
+
+/**
+ * Sighash BIP143 para un input P2WPKH. Envoltorio fino sobre
+ * `computeSighashBIP143`: solo construye el scriptCode P2PKH-equivalente.
+ *
+ * @param pubKeyHash  - hash160 de la pubkey del propietario del UTXO (20 B)
+ */
+export function computeSighashP2WPKH(
+  tx: Transaction,
+  inputIndex: number,
+  pubKeyHash: Uint8Array,
+  amount: bigint,
+  sighashType: number = SIGHASH.ALL,
+): SighashP2WPKHResult {
+  return computeSighashBIP143(tx, inputIndex, p2wpkhScriptCode(pubKeyHash), amount, sighashType);
+}
+
+/**
+ * Sighash BIP143 para un input P2WSH. Envoltorio fino sobre
+ * `computeSighashBIP143`: el scriptCode ES el witnessScript entero.
+ *
+ * @param witnessScript - El script que se revela al gastar (p. ej. multisig m-of-n)
+ */
+export function computeSighashP2WSH(
+  tx: Transaction,
+  inputIndex: number,
+  witnessScript: Uint8Array,
+  amount: bigint,
+  sighashType: number = SIGHASH.ALL,
+): SighashBIP143Result {
+  return computeSighashBIP143(tx, inputIndex, witnessScript, amount, sighashType);
 }
 
 // ─── Firma completa de un input P2WPKH ──────────────────────
