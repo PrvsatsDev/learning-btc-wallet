@@ -15,6 +15,7 @@ import { TxBuilder } from './components/TxBuilder';
 import { EntropyAuditor } from './components/EntropyAuditor';
 import { MultisigGuide } from './components/MultisigGuide';
 import { MultisigExplorer } from './components/MultisigExplorer';
+import { PsbtExplorer } from './components/PsbtExplorer';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
 import './App.css';
 
@@ -22,7 +23,7 @@ type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
   | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
   | 'wallet-setup' | 'balance' | 'tx-builder' | 'entropy-audit'
-  | 'multisig-guide' | 'multisig-explorer';
+  | 'multisig-guide' | 'multisig-explorer' | 'psbt-explorer';
 
 interface Phase {
   id: string;
@@ -69,6 +70,7 @@ const phases: Phase[] = [
     label: 'Fase 4: UI visual',
     lessons: [
       { id: 'multisig-explorer', label: 'Multisig Explorer', component: MultisigExplorer },
+      { id: 'psbt-explorer', label: 'PSBT Explorer', component: PsbtExplorer },
     ],
   },
 ];

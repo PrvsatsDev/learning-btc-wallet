@@ -1,0 +1,587 @@
+/* PsbtExplorer — Fase 4, sección interactiva */
+
+.pbe {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+/* ─── Cabecera ─────────────────────────────────────────── */
+
+.pbe-header { margin-bottom: 1rem; }
+
+.pbe-phase-tag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #f7931a;
+  background: #f7931a1a;
+  border: 1px solid #f7931a33;
+  border-radius: 999px;
+  padding: 0.25rem 0.7rem;
+  margin-bottom: 0.75rem;
+}
+
+.pbe-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #f7931a;
+  margin: 0 0 0.5rem;
+}
+
+.pbe-subtitle {
+  color: #94a3b8;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.pbe code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.86em;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  padding: 0.05em 0.35em;
+  color: #e2e8f0;
+}
+
+.pbe strong { color: #f1f5f9; }
+.pbe em { color: #cbd5e1; font-style: italic; }
+
+/* ─── Intro ────────────────────────────────────────────── */
+
+.pbe-intro {
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+  background: #0c2f3a;
+  border: 1px solid #22d3ee33;
+  border-left: 4px solid #22d3ee;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.pbe-intro strong { color: #67e8f9; }
+
+/* ─── Riel de roles ────────────────────────────────────── */
+
+.pbe-rail {
+  display: flex;
+  gap: 0.3rem;
+  margin-bottom: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.pbe-rail-step {
+  flex: 1;
+  min-width: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.6rem 0.4rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pbe-rail-step:hover:not(:disabled) { border-color: #475569; }
+.pbe-rail-step:disabled { cursor: default; opacity: 0.6; }
+
+.pbe-rail-step.done { border-color: #22c55e44; }
+.pbe-rail-step.active {
+  background: #f7931a1a;
+  border-color: #f7931a;
+}
+
+.pbe-rail-num {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  background: #0f172a;
+  color: #94a3b8;
+  border: 1px solid #334155;
+}
+
+.pbe-rail-step.active .pbe-rail-num { background: #f7931a; color: #0f172a; border-color: #f7931a; }
+.pbe-rail-step.done .pbe-rail-num { color: #4ade80; border-color: #22c55e55; }
+
+.pbe-rail-role {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.pbe-rail-step.active .pbe-rail-role { color: #f7931a; font-weight: 600; }
+
+/* ─── Carga ────────────────────────────────────────────── */
+
+.pbe-loading {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+  background: #0c2f3a;
+  border: 1px solid #22d3ee33;
+  border-radius: 8px;
+  color: #67e8f9;
+  font-size: 0.85rem;
+}
+
+.pbe-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #22d3ee44;
+  border-top-color: #22d3ee;
+  border-radius: 50%;
+  animation: pbe-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes pbe-spin { to { transform: rotate(360deg); } }
+
+/* ─── Explicación del rol ──────────────────────────────── */
+
+.pbe-explain {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.25rem 1.35rem;
+  margin-bottom: 1.25rem;
+}
+
+.pbe-explain-head {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 0.85rem;
+}
+
+.pbe-explain-num {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  background: #f7931a;
+  color: #0f172a;
+}
+
+.pbe-explain-head h2 {
+  margin: 0 0 0.2rem;
+  font-size: 1.15rem;
+  color: #f7931a;
+}
+
+.pbe-explain-sub { color: #cbd5e1; font-weight: 400; font-size: 0.95rem; }
+
+.pbe-actor { font-size: 0.8rem; color: #94a3b8; }
+
+.pbe-points {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pbe-points li {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: #cbd5e1;
+}
+
+.pbe-points li::marker { color: #f7931a; }
+
+/* ─── Tarjeta de transacción ───────────────────────────── */
+
+.pbe-txcard {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 1.1rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.pbe-txflow {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  margin-top: 0.75rem;
+}
+
+.pbe-txside {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 0.8rem 0.9rem;
+}
+
+.pbe-txrole {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.pbe-txaddr { font-size: 0.78rem; color: #7dd3fc; background: transparent; border: none; padding: 0; }
+.pbe-txamt { font-size: 1.05rem; font-weight: 700; color: #f7931a; font-family: ui-monospace, monospace; }
+.pbe-txkind { font-size: 0.75rem; color: #94a3b8; }
+
+.pbe-txarrow {
+  align-self: center;
+  font-size: 1.4rem;
+  color: #f7931a;
+}
+
+/* ─── Secciones ────────────────────────────────────────── */
+
+.pbe-section { margin-bottom: 1.5rem; }
+
+.pbe-label {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  margin-bottom: 0.6rem;
+}
+
+.pbe-label--mt { margin-top: 1.1rem; }
+
+.pbe-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.6rem;
+}
+
+.pbe-label-row .pbe-label { margin-bottom: 0; }
+
+.pbe-copy {
+  font-size: 0.74rem;
+  padding: 0.3rem 0.7rem;
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pbe-copy:hover { background: #334155; color: #e2e8f0; }
+
+/* ─── Mapa clave→valor ─────────────────────────────────── */
+
+.pbe-map {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.pbe-empty {
+  padding: 0.9rem 1rem;
+  background: #0f172a;
+  border: 1px dashed #334155;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  color: #64748b;
+  font-style: italic;
+}
+
+.pbe-kv {
+  display: flex;
+  gap: 0.75rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.pbe-kv--new {
+  border-color: #f7931a88;
+  background: #f7931a12;
+  animation: pbe-pop 0.3s ease;
+}
+
+@keyframes pbe-pop {
+  from { transform: translateY(-3px); opacity: 0.4; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+
+.pbe-kv-type {
+  flex-shrink: 0;
+  align-self: flex-start;
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.pbe-kv-body { min-width: 0; flex: 1; }
+
+.pbe-kv-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.pbe-kv-extra {
+  font-size: 0.72rem;
+  font-family: ui-monospace, monospace;
+  color: #cbd5e1;
+}
+
+.pbe-kv-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #f7931a;
+  background: #f7931a22;
+  border-radius: 4px;
+  padding: 0.1rem 0.35rem;
+}
+
+.pbe-kv-len {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-family: ui-monospace, monospace;
+  margin-left: auto;
+}
+
+.pbe-kv-val {
+  display: block;
+  background: #0f172a !important;
+  border: 1px solid #334155 !important;
+  border-radius: 6px;
+  padding: 0.35rem 0.5rem !important;
+  font-size: 0.72rem;
+  color: #7dd3fc;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.pbe-kv-note {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #94a3b8;
+}
+
+.pbe-removed {
+  margin: 0.75rem 0 0;
+  padding: 0.55rem 0.8rem;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+}
+
+.pbe-hint {
+  margin: 0.6rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.55;
+  color: #94a3b8;
+}
+
+/* ─── Witness ──────────────────────────────────────────── */
+
+.pbe-witness {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pbe-witem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+}
+
+.pbe-witem-idx {
+  flex-shrink: 0;
+  width: 1.4rem;
+  height: 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  color: #e879f9;
+  background: #e879f918;
+  border-radius: 5px;
+}
+
+.pbe-witem-label {
+  flex-shrink: 0;
+  min-width: 6.5rem;
+  font-size: 0.8rem;
+  color: #f1f5f9;
+}
+
+.pbe-witem-hex {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  color: #7dd3fc;
+  background: transparent;
+  border: none;
+  padding: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.pbe-witem-len {
+  flex-shrink: 0;
+  font-size: 0.68rem;
+  color: #64748b;
+  font-family: ui-monospace, monospace;
+}
+
+/* ─── Transacción cruda ────────────────────────────────── */
+
+.pbe-raw {
+  background: #0f172a;
+  border: 1px solid #f7931a44;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  overflow-x: auto;
+}
+
+.pbe-raw code {
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: #e2e8f0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.pbe-txid {
+  margin-top: 0.85rem;
+}
+
+.pbe-txid code {
+  display: block;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 0.5rem 0.7rem;
+  font-size: 0.76rem;
+  color: #f7931a;
+  word-break: break-all;
+}
+
+/* ─── Base64 ───────────────────────────────────────────── */
+
+.pbe-b64 {
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+.pbe-b64 code {
+  display: block;
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: 0.7rem;
+  line-height: 1.55;
+  color: #86efac;
+  word-break: break-all;
+}
+
+/* ─── Navegación ───────────────────────────────────────── */
+
+.pbe-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #1e293b;
+}
+
+.pbe-nav-btn {
+  padding: 0.6rem 1.1rem;
+  font-size: 0.85rem;
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pbe-nav-btn:hover:not(:disabled) { background: #334155; }
+.pbe-nav-btn:disabled { opacity: 0.4; cursor: default; }
+
+.pbe-nav-btn--primary {
+  background: #f7931a;
+  color: #0f172a;
+  border-color: #f7931a;
+  font-weight: 600;
+}
+
+.pbe-nav-btn--primary:hover:not(:disabled) { background: #ffa733; }
+
+.pbe-nav-pos {
+  font-size: 0.82rem;
+  color: #94a3b8;
+  font-family: ui-monospace, monospace;
+}
+
+/* ─── Responsive ───────────────────────────────────────── */
+
+@media (max-width: 620px) {
+  .pbe-txflow { flex-direction: column; }
+  .pbe-txarrow { transform: rotate(90deg); }
+  .pbe-rail-role { display: none; }
+  .pbe-rail-step { min-width: 44px; }
+}
