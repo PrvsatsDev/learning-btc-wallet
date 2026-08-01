@@ -15,9 +15,12 @@
  * de descriptor (algoritmo de Bitcoin Core) y el ensamblado de la cadena.
  */
 
-import { createMultisig, addressP2WSH } from './script';
+import { createMultisig, addressP2WSH, createP2TR, addressP2TR } from './script';
 import { derivePath, deriveChildPublic, getMultisigDerivationPath, type HDNode, type MultisigScriptType } from './hdwallet';
 import { compressPublicKey } from './secp256k1';
+import { tapscriptMultisig, tapLeafHash } from './tapscript';
+import { tweakPublicKey } from './taproot';
+import { bytesToBigint } from './hmac';
 
 // ─── BIP67: orden lexicográfico de claves ───────────────────
 /**
@@ -120,6 +123,86 @@ export function buildWshSortedMulti(
   return withChecksum(`wsh(sortedmulti(${m},${inner}))`);
 }
 
+// ─── Multisig Taproot: tr(NUMS, sortedmulti_a(m,…)) ─────────
+/**
+ * El multisig ESTÁNDAR en Taproot (el que usan Sparrow, Bitcoin Core, etc.):
+ *
+ *   tr( CLAVE_INTERNA , sortedmulti_a(m, key1, key2, …, keyn) )#checksum
+ *
+ * `sortedmulti_a` (BIP387) es el fragmento multisig de Taproot: monta la hoja
+ * `<pk1> CHECKSIG <pk2> CHECKSIGADD … <m> NUMEQUAL` con claves x-only ordenadas
+ * (BIP67). Se coloca como ÚNICA hoja del árbol, y la CLAVE INTERNA se pone a un
+ * punto NUMS (Nothing-Up-My-Sleeve) para que NO exista gasto por key-path: así
+ * el único modo de gastar es cumplir el multisig por script-path.
+ */
+
+/**
+ * Punto NUMS estándar (BIP341): un punto de la curva cuyo logaritmo discreto
+ * nadie conoce → clave interna "inutilizable". Con esto, la salida Taproot solo
+ * se puede gastar por script-path (nunca por key-path).
+ */
+export const NUMS_H = '50929b74c1a04954b78b4b6035e97a5e078a5a0f28ec96d547bfee9ace803ac0';
+
+/** Ordena claves x-only (32 bytes) lexicográficamente — el orden de sortedmulti_a. */
+export function sortXOnlyBIP67(keys: Uint8Array[]): Uint8Array[] {
+  return [...keys].sort(comparePubKeys);
+}
+
+export interface TrMultisig {
+  leafScriptHex: string;    // la hoja: <pk1> CHECKSIG … <m> NUMEQUAL
+  leafHashHex: string;      // TapLeaf hash
+  merkleRootHex: string;    // = leafHash (árbol de una sola hoja)
+  outputKeyHex: string;     // Q.x — la clave de salida ajustada
+  scriptPubKeyHex: string;  // OP_1 <Q.x>
+  address: string;          // bc1p… / tb1p…
+}
+
+/**
+ * Deriva la salida Taproot de un multisig m-de-n: ordena las claves (BIP67),
+ * monta la hoja multi_a, la pone como única hoja del árbol y ajusta la clave
+ * interna con esa merkle root. Devuelve scriptPubKey y dirección.
+ *
+ * @param internalXonly  clave interna x-only (32 B) — normalmente el NUMS `NUMS_H`
+ * @param sorted         true = sortedmulti_a (ordena); false = multi_a (respeta orden)
+ */
+export function deriveTrMultisig(
+  internalXonly: Uint8Array,
+  m: number,
+  xonlyKeys: Uint8Array[],
+  sorted = true,
+  mainnet = true,
+): TrMultisig {
+  const keys = sorted ? sortXOnlyBIP67(xonlyKeys) : xonlyKeys;
+  const leaf = tapscriptMultisig(m, keys);
+  const leafHash = tapLeafHash(leaf);
+  const { outputKey } = tweakPublicKey(bytesToBigint(internalXonly), leafHash);
+  const outBytes = bigintTo32(outputKey);
+  return {
+    leafScriptHex: bytesToHex(leaf),
+    leafHashHex: bytesToHex(leafHash),
+    merkleRootHex: bytesToHex(leafHash),
+    outputKeyHex: bytesToHex(outBytes),
+    scriptPubKeyHex: bytesToHex(createP2TR(outBytes)),
+    address: addressP2TR(outBytes, mainnet),
+  };
+}
+
+/**
+ * Construye el descriptor `tr(interna,sortedmulti_a(m,…))#checksum` con las
+ * expresiones de clave de los cosignatarios. Por defecto la clave interna es el
+ * NUMS estándar (sin gasto por key-path).
+ */
+export function buildTrSortedMultiA(
+  keys: { keyExpression: string }[],
+  m: number,
+  chain: '0' | '1' | '<0;1>' = '<0;1>',
+  internalKeyExpr: string = NUMS_H,
+): string {
+  if (m < 1 || m > keys.length) throw new Error(`m (umbral) debe estar entre 1 y ${keys.length}`);
+  const inner = keys.map(k => `${k.keyExpression}/${chain}/*`).join(',');
+  return withChecksum(`tr(${internalKeyExpr},sortedmulti_a(${m},${inner}))`);
+}
+
 // ─── Derivación de dirección desde el descriptor ────────────
 /**
  * Monta la dirección P2WSH de un multisig a partir de las claves públicas YA
@@ -202,6 +285,14 @@ function hexToBytes(hex: string): Uint8Array {
     bytes[i] = parseInt(hex.substring(i * 2, i * 2 + 2), 16);
   }
   return bytes;
+}
+
+/** bigint → 32 bytes big-endian (para claves x-only). */
+function bigintTo32(n: bigint): Uint8Array {
+  const out = new Uint8Array(32);
+  let v = n;
+  for (let i = 31; i >= 0; i--) { out[i] = Number(v & 0xffn); v >>= 8n; }
+  return out;
 }
 
 function bytesToHex(bytes: Uint8Array): string {
