@@ -191,11 +191,14 @@ export function TxBuilder() {
       const seed = mnemonicToSeed(words, passphrase);
       const master = masterKeyFromSeed(seed);
 
-      // Derivar 5 direcciones de recepción + 1 de cambio
+      // Derivar 5 direcciones de recepción + 1 de cambio.
+      // coin_type según la red: 0' mainnet, 1' testnet/signet (SLIP-0044).
+      // Debe coincidir con dónde están los fondos, o no encontraremos el UTXO.
+      const coinType = network === 'mainnet' ? 0 : 1;
       const allUtxos: WalletUTXO[] = [];
 
       for (let i = 0; i < 5; i++) {
-        const path = getDerivationPath(84, 0, false, i);
+        const path = getDerivationPath(84, 0, false, i, coinType);
         const { node } = derivePath(master, path);
         const address = getAddress(node, 84, network === 'mainnet');
 
@@ -305,7 +308,8 @@ export function TxBuilder() {
     const words = mnemonicInput.trim().split(/\s+/);
     const seed = mnemonicToSeed(words, passphrase);
     const master = masterKeyFromSeed(seed);
-    const changePath = getDerivationPath(84, 0, true, changeIndex); // change chain = true
+    const changeCoinType = network === 'mainnet' ? 0 : 1;
+    const changePath = getDerivationPath(84, 0, true, changeIndex, changeCoinType); // change chain = true
     const { node: changeNode } = derivePath(master, changePath);
     // Para P2WPKH necesitamos el hash160 de la pubkey comprimida
     const changeNodeCompressed = compressPublicKey(changeNode.publicKey);
@@ -361,7 +365,7 @@ export function TxBuilder() {
       fee: estimatedFee,
       changeAmount: changeAmount > 546 ? changeAmount : 0,
     });
-  }, [selected, recipientAddress, amountSats, changeAmount, estimatedSize, estimatedFee, mnemonicInput, passphrase, changeIndex]);
+  }, [selected, recipientAddress, amountSats, changeAmount, estimatedSize, estimatedFee, mnemonicInput, passphrase, changeIndex, network]);
 
   // ─── Firmar transacción (BIP143 + ECDSA) ────────────────
 

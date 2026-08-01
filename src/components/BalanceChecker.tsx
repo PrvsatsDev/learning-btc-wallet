@@ -124,10 +124,12 @@ export function BalanceChecker() {
       const seed = mnemonicToSeed(words, passphrase);
       const master = masterKeyFromSeed(seed);
 
-      // Derivar 5 direcciones de recepción BIP84
+      // Derivar 5 direcciones de recepción BIP84.
+      // coin_type según la red: 0' mainnet, 1' testnet/signet (SLIP-0044).
+      const coinType = network === 'mainnet' ? 0 : 1;
       const addresses: AddressData[] = [];
       for (let i = 0; i < 5; i++) {
-        const path = getDerivationPath(84, 0, false, i);
+        const path = getDerivationPath(84, 0, false, i, coinType);
         const { node } = derivePath(master, path);
         addresses.push({
           path,

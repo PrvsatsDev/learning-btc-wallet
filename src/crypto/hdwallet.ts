@@ -349,8 +349,14 @@ export function getDerivationPath(
   account: number = 0,
   change: boolean = false,
   index: number = 0,
+  coinType: number = 0,
 ): string {
-  return `m/${purpose}'/0'/${account}'/${change ? 1 : 0}/${index}`;
+  // coin_type según SLIP-0044: 0' = Bitcoin mainnet, 1' = cualquier testnet.
+  // No es cosmético: cambia la clave derivada, así que la dirección con fondos
+  // en testnet (1') es DISTINTA de la de mainnet (0') para la misma seed.
+  // Por eso Sparrow/Electrum usan 1' en testnet — hay que usar lo mismo para
+  // encontrar el UTXO y poder firmarlo.
+  return `m/${purpose}'/${coinType}'/${account}'/${change ? 1 : 0}/${index}`;
 }
 
 /**

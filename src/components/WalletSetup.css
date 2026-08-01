@@ -172,6 +172,67 @@
   font-weight: 600;
 }
 
+/* Network selector */
+.network-selector {
+  margin: 1rem 0;
+}
+
+.network-label {
+  display: block;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 0.5rem;
+}
+
+.network-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.network-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: 0.55rem 0.5rem;
+  background: #1e293b;
+  color: #94a3b8;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.network-btn:hover {
+  background: #334155;
+}
+
+.network-btn.active {
+  background: #f7931a22;
+  color: #f7931a;
+  border-color: #f7931a44;
+}
+
+.network-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.network-hrp {
+  font-size: 0.68rem;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  opacity: 0.75;
+}
+
+.network-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.72rem;
+  color: #64748b;
+}
+
 /* Warning box */
 .warning-box {
   padding: 0.75rem 1rem;

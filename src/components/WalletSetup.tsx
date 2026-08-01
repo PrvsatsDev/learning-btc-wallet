@@ -27,6 +27,7 @@ import {
   BIP39_WORDLIST,
 } from '../crypto/hdwallet';
 import { bytesToHex } from '../crypto/hmac';
+import type { Network } from '../api/mempool';
 import './WalletSetup.css';
 
 type Step = 'choose' | 'generate' | 'import' | 'confirm-backup' | 'wallet';
@@ -36,8 +37,16 @@ interface WalletData {
   words: string[];
   passphrase: string;
   seedHex: string;
+  network: Network;
   addresses: { index: number; path: string; address: string }[];
 }
+
+/** Metadatos de cada red para la UI */
+const NETWORKS: { id: Network; label: string; hrp: string; hint: string }[] = [
+  { id: 'testnet4', label: 'Testnet4', hrp: 'tb1q', hint: 'Red de pruebas — la que usamos para experimentar' },
+  { id: 'signet', label: 'Signet', hrp: 'tb1q', hint: 'Red de pruebas firmada, más estable que testnet' },
+  { id: 'mainnet', label: 'Mainnet', hrp: 'bc1q', hint: 'Red real — aquí las monedas valen dinero de verdad' },
+];
 
 export function WalletSetup() {
   const [step, setStep] = useState<Step>('choose');
@@ -46,6 +55,7 @@ export function WalletSetup() {
   const [passphrase, setPassphrase] = useState('');
   const [debouncedPassphrase, setDebouncedPassphrase] = useState('');
   const [wordCount, setWordCount] = useState<12 | 24>(12);
+  const [network, setNetwork] = useState<Network>('testnet4');
   const [backupConfirmed, setBackupConfirmed] = useState(false);
   const [showWords, setShowWords] = useState(true);
   const [walletData, setWalletData] = useState<WalletData | null>(null);
@@ -93,15 +103,19 @@ export function WalletSetup() {
     const seed = mnemonicToSeed(seedWords, pass);
     const master = masterKeyFromSeed(seed);
 
-    // Derivar 5 direcciones de recepción BIP84 (SegWit nativo, bc1q...)
+    // Derivar 5 direcciones de recepción BIP84 (SegWit nativo).
+    // La red cambia DOS cosas: el coin_type de la ruta (0' mainnet, 1' testnet)
+    // y el HRP de la dirección (bc1q vs tb1q). El coin_type altera la clave
+    // derivada, así que la misma seed da direcciones distintas en cada red.
+    const coinType = network === 'mainnet' ? 0 : 1;
     const addresses: WalletData['addresses'] = [];
     for (let i = 0; i < 5; i++) {
-      const path = getDerivationPath(84, 0, false, i);
+      const path = getDerivationPath(84, 0, false, i, coinType);
       const { node } = derivePath(master, path);
       addresses.push({
         index: i,
         path,
-        address: getAddress(node, 84),
+        address: getAddress(node, 84, network === 'mainnet'),
       });
     }
 
@@ -109,12 +123,37 @@ export function WalletSetup() {
       words: seedWords,
       passphrase: pass,
       seedHex: bytesToHex(seed),
+      network,
       addresses,
     });
     setStep('wallet');
-  }, []);
+  }, [network]);
 
   // ─── Render por paso ─────────────────────────────────────
+
+  // Selector de red compartido — se muestra en elegir/generar/importar.
+  // La red controla el HRP de las direcciones y a qué API de mempool.space
+  // se conectará luego el resto de la wallet (BalanceChecker, TxBuilder).
+  const networkSelector = (
+    <div className="network-selector">
+      <span className="network-label">Red</span>
+      <div className="network-options">
+        {NETWORKS.map(n => (
+          <button
+            key={n.id}
+            type="button"
+            className={`network-btn ${network === n.id ? 'active' : ''}`}
+            onClick={() => setNetwork(n.id)}
+            title={n.hint}
+          >
+            <span className="network-name">{n.label}</span>
+            <span className="network-hrp">{n.hrp}…</span>
+          </button>
+        ))}
+      </div>
+      <p className="network-hint">{NETWORKS.find(n => n.id === network)!.hint}</p>
+    </div>
+  );
 
   return (
     <div className="wallet-setup">
@@ -152,6 +191,8 @@ export function WalletSetup() {
             que codifican toda la entropía necesaria. De esas palabras se deriva
             todo: la seed, la master key, y un árbol infinito de direcciones.
           </p>
+
+          {networkSelector}
 
           <div className="choice-cards">
             <div className="choice-card" onClick={handleGenerate}>
@@ -229,6 +270,8 @@ export function WalletSetup() {
             </button>
           </div>
 
+          {networkSelector}
+
           {/* Passphrase opcional */}
           <div className="passphrase-section">
             <span className="passphrase-label">Passphrase (opcional):</span>
@@ -292,6 +335,8 @@ export function WalletSetup() {
             }}
             placeholder="abandon ability able about above absent absorb abstract absurd abuse access accident..."
           />
+
+          {networkSelector}
 
           {importValidation && (
             <div className={`validation-msg ${importValidation.valid ? 'valid' : 'invalid'}`}>
@@ -365,9 +410,12 @@ export function WalletSetup() {
           </div>
 
           <div className="wallet-section">
-            <span className="section-label">Direcciones de recepción</span>
+            <span className="section-label">
+              Direcciones de recepción &middot; {NETWORKS.find(n => n.id === walletData.network)!.label}
+            </span>
             <p className="section-description">
-              Ruta BIP84: <code>m/84'/0'/0'/0/i</code> — SegWit nativo (bc1q...).
+              Ruta BIP84: <code>m/84'/{walletData.network === 'mainnet' ? 0 : 1}'/0'/0/i</code> — SegWit nativo
+              ({walletData.network === 'mainnet' ? 'bc1q…' : 'tb1q…'}).
               Cada transacción debería usar una dirección nueva para mayor privacidad.
               Estas son tus primeras 5 direcciones.
             </p>
