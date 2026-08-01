@@ -69,6 +69,7 @@ import { computeSighashTaproot, SIGHASH_DEFAULT } from './sighash-taproot';
 import { ecdsaSign } from './ecdsa';
 import { schnorrSign } from './schnorr';
 import { tweakPrivateKey } from './taproot';
+import { tapLeafHash, parseTapscriptMultisig, TAPROOT_LEAF_VERSION } from './tapscript';
 import { getPublicKey, compressPublicKey } from './secp256k1';
 
 // ─── Tipos de clave (keytype) — el subconjunto SegWit v0 ────
@@ -735,6 +736,145 @@ export function finalizeTaprootKeyPathInput(psbt: Psbt, inputIndex: number): { w
   if (!sig) throw new Error(`Input ${inputIndex} sin TAP_KEY_SIG: fírmalo primero`);
 
   const witnessStack: Uint8Array[] = [sig];
+  setKeyPair(map, new Uint8Array([PSBT_IN.FINAL_SCRIPTWITNESS]), serializeWitnessStack(witnessStack));
+
+  const keepTypes = new Set<number>([PSBT_IN.WITNESS_UTXO, PSBT_IN.FINAL_SCRIPTWITNESS, PSBT_IN.FINAL_SCRIPTSIG]);
+  psbt.inputs[inputIndex] = map.filter(kp => keepTypes.has(kp.key[0]));
+  return { witnessStack };
+}
+
+// ─── Taproot (BIP371): script-path (multisig con CHECKSIGADD) ─
+
+/**
+ * Updater — declara una hoja de script gastable (TAP_LEAF_SCRIPT).
+ *   key   = 0x15 ‖ controlBlock     (la prueba Merkle de que la hoja está en Q)
+ *   value = script ‖ leafVersion    (el script en claro + su versión al final)
+ */
+export function updateInputTapLeafScript(
+  psbt: Psbt,
+  inputIndex: number,
+  script: Uint8Array,
+  controlBlock: Uint8Array,
+  leafVersion: number = TAPROOT_LEAF_VERSION,
+): void {
+  const key = concat(new Uint8Array([PSBT_IN.TAP_LEAF_SCRIPT]), controlBlock);
+  const value = concat(script, new Uint8Array([leafVersion]));
+  setKeyPair(psbt.inputs[inputIndex], key, value);
+}
+
+export interface TapLeafScriptEntry {
+  controlBlock: Uint8Array;
+  script: Uint8Array;
+  leafVersion: number;
+}
+
+export function getTapLeafScripts(map: PsbtMap): TapLeafScriptEntry[] {
+  return getKeyPairs(map, PSBT_IN.TAP_LEAF_SCRIPT).map(kp => ({
+    controlBlock: kp.key.slice(1),
+    script: kp.value.slice(0, kp.value.length - 1),
+    leafVersion: kp.value[kp.value.length - 1],
+  }));
+}
+
+export interface TapScriptSig {
+  pubkey: Uint8Array;   // x-only (32B)
+  leafHash: Uint8Array; // 32B
+  signature: Uint8Array;
+}
+
+export function getTapScriptSigs(map: PsbtMap): TapScriptSig[] {
+  return getKeyPairs(map, PSBT_IN.TAP_SCRIPT_SIG).map(kp => ({
+    pubkey: kp.key.slice(1, 33),
+    leafHash: kp.key.slice(33, 65),
+    signature: kp.value,
+  }));
+}
+
+export interface SignTaprootScriptResult {
+  sigHash: Uint8Array;
+  signature: Uint8Array;
+  pubkey: Uint8Array;    // x-only del firmante
+  leafHash: Uint8Array;
+}
+
+/**
+ * Signer — firma un input Taproot por SCRIPT-PATH y guarda TAP_SCRIPT_SIG.
+ *
+ * Dos diferencias clave respecto al key-path:
+ *   1. La clave NO se ajusta (nada de tweak): en el script-path firmas con tu
+ *      clave TAL CUAL, la misma que aparece x-only dentro del script.
+ *   2. El sighash incluye el `ext`: el hash de la hoja que se está ejecutando
+ *      (así la firma queda atada a ESE script, no a cualquiera del árbol).
+ *
+ * La firma se indexa por (pubkey ‖ leafHash): así conviven las firmas de varios
+ * cosignatarios sobre la misma hoja — el multisig repartido, ahora en Taproot.
+ */
+export function signTaprootScriptPathInput(
+  psbt: Psbt,
+  inputIndex: number,
+  privateKey: bigint,
+  leafScript: Uint8Array,
+  leafVersion: number = TAPROOT_LEAF_VERSION,
+  hashType: number = SIGHASH_DEFAULT,
+  auxRand?: Uint8Array,
+): SignTaprootScriptResult {
+  const tx = getUnsignedTx(psbt);
+  const prevouts = psbt.inputs.map((m, idx) => {
+    const u = getWitnessUtxo(m);
+    if (!u) throw new Error(`Input ${idx} sin WITNESS_UTXO: el sighash Taproot los necesita todos`);
+    return u;
+  });
+
+  const map = psbt.inputs[inputIndex];
+  const leafHash = tapLeafHash(leafScript, leafVersion);
+  const { sigHash } = computeSighashTaproot(tx, inputIndex, prevouts, { hashType, ext: { tapLeafHash: leafHash } });
+
+  // Script-path: se firma con la clave SIN ajustar.
+  const sig64 = hexToBytes(schnorrSign(sigHash, privateKey, auxRand).signatureHex);
+  const signature = hashType === SIGHASH_DEFAULT ? sig64 : concat(sig64, new Uint8Array([hashType]));
+  const pubkey = hexToBytes(compressPublicKey(getPublicKey(privateKey))).slice(1); // x-only (32B)
+
+  const key = concat(new Uint8Array([PSBT_IN.TAP_SCRIPT_SIG]), pubkey, leafHash);
+  setKeyPair(map, key, signature);
+  return { sigHash, signature, pubkey, leafHash };
+}
+
+/**
+ * Finalizer — para un input multisig Taproot (script-path con OP_CHECKSIGADD),
+ * monta el witness definitivo:
+ *
+ *   [ sig_pkN … sig_pk1 , script , controlBlock ]
+ *
+ *   - Una firma por CADA clave del script, en el orden INVERSO al del script
+ *     (así CHECKSIG/CHECKSIGADD las consumen de arriba abajo); vacío para las
+ *     claves que no firmaron. Se dejan exactamente k firmas (más harían que el
+ *     contador supere el umbral y NUMEQUAL falle).
+ *   - Luego el script (la hoja) y el control block (la prueba Merkle).
+ *
+ * Compárese con el P2WSH clásico: aquí no hay dummy y las firmas son Schnorr.
+ */
+export function finalizeTaprootScriptPathInput(psbt: Psbt, inputIndex: number): { witnessStack: Uint8Array[] } {
+  const map = psbt.inputs[inputIndex];
+  const leaves = getTapLeafScripts(map);
+  if (leaves.length === 0) throw new Error(`Input ${inputIndex} sin TAP_LEAF_SCRIPT`);
+  const { script, controlBlock, leafVersion } = leaves[0];
+  const leafHash = tapLeafHash(script, leafVersion);
+
+  const { k, pubKeys } = parseTapscriptMultisig(script);
+  const sigs = getTapScriptSigs(map).filter(s => bytesEqual(s.leafHash, leafHash));
+  const byPubkey = new Map(sigs.map(s => [bytesToHex(s.pubkey), s.signature]));
+
+  // Una entrada por clave, en orden de script; nos quedamos con exactamente k.
+  let kept = 0;
+  const perKey: Uint8Array[] = pubKeys.map(pk => {
+    const sig = byPubkey.get(bytesToHex(pk));
+    if (sig && kept < k) { kept++; return sig; }
+    return new Uint8Array(0); // clave sin firma (o sobrante) → elemento vacío
+  });
+  if (kept < k) throw new Error(`Faltan firmas: hay ${kept}, se necesitan ${k}`);
+
+  // Orden inverso al del script + script + control block.
+  const witnessStack: Uint8Array[] = [...perKey.slice().reverse(), script, controlBlock];
   setKeyPair(map, new Uint8Array([PSBT_IN.FINAL_SCRIPTWITNESS]), serializeWitnessStack(witnessStack));
 
   const keepTypes = new Set<number>([PSBT_IN.WITNESS_UTXO, PSBT_IN.FINAL_SCRIPTWITNESS, PSBT_IN.FINAL_SCRIPTSIG]);

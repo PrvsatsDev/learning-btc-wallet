@@ -190,6 +190,34 @@ export function tapscriptMultisig(k: number, xonlyPubKeys: Uint8Array[]): Uint8A
   return new Uint8Array(parts);
 }
 
+export interface TapscriptMultisigInfo {
+  k: number;               // umbral
+  pubKeys: Uint8Array[];   // claves x-only en el ORDEN del script
+}
+
+/**
+ * Parsea un multisig Tapscript `<pk1> CHECKSIG <pk2> CHECKSIGADD … <k> NUMEQUAL`.
+ * Devuelve el umbral k y las claves x-only en orden — el finalizer las necesita
+ * para colocar cada firma en su posición.
+ */
+export function parseTapscriptMultisig(script: Uint8Array): TapscriptMultisigInfo {
+  let offset = 0;
+  const pubKeys: Uint8Array[] = [];
+  while (script[offset] === 0x20) {          // push de 32 bytes (clave x-only)
+    offset++;
+    pubKeys.push(script.slice(offset, offset + 32));
+    offset += 32;
+    const op = script[offset++];             // OP_CHECKSIG (0xac) u OP_CHECKSIGADD (0xba)
+    if (op !== OP.OP_CHECKSIG && op !== OP.OP_CHECKSIGADD) {
+      throw new Error(`opcode inesperado tras la clave: 0x${op.toString(16)}`);
+    }
+  }
+  const k = script[offset++] - 0x50;         // OP_k
+  if (script[offset] !== OP.OP_NUMEQUAL) throw new Error('el script no termina en OP_NUMEQUAL');
+  if (k < 1 || k > pubKeys.length) throw new Error(`umbral k inválido (${k})`);
+  return { k, pubKeys };
+}
+
 // ─── Utilidades ─────────────────────────────────────────────
 
 function concat(...arrays: Uint8Array[]): Uint8Array {
