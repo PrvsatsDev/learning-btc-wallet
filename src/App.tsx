@@ -16,6 +16,7 @@ import { EntropyAuditor } from './components/EntropyAuditor';
 import { MultisigGuide } from './components/MultisigGuide';
 import { MultisigExplorer } from './components/MultisigExplorer';
 import { PsbtExplorer } from './components/PsbtExplorer';
+import { TaprootMultisigExplorer } from './components/TaprootMultisigExplorer';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
 import './App.css';
 
@@ -23,7 +24,7 @@ type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
   | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
   | 'wallet-setup' | 'balance' | 'tx-builder' | 'entropy-audit'
-  | 'multisig-guide' | 'multisig-explorer' | 'psbt-explorer';
+  | 'multisig-guide' | 'multisig-explorer' | 'psbt-explorer' | 'taproot-multisig';
 
 interface Phase {
   id: string;
@@ -71,6 +72,7 @@ const phases: Phase[] = [
     lessons: [
       { id: 'multisig-explorer', label: 'Multisig Explorer', component: MultisigExplorer },
       { id: 'psbt-explorer', label: 'PSBT Explorer', component: PsbtExplorer },
+      { id: 'taproot-multisig', label: 'Taproot Multisig', component: TaprootMultisigExplorer },
     ],
   },
 ];
