@@ -65,7 +65,10 @@ import {
   parseTxHex,
 } from './transaction';
 import { computeSighashBIP143, SIGHASH, p2wpkhScriptCode } from './sighash';
+import { computeSighashTaproot, SIGHASH_DEFAULT } from './sighash-taproot';
 import { ecdsaSign } from './ecdsa';
+import { schnorrSign } from './schnorr';
+import { tweakPrivateKey } from './taproot';
 import { getPublicKey, compressPublicKey } from './secp256k1';
 
 // ─── Tipos de clave (keytype) — el subconjunto SegWit v0 ────
@@ -87,6 +90,13 @@ export const PSBT_IN = {
   BIP32_DERIVATION: 0x06,   // key = 0x06||pubkey, value = fingerprint(4)||path
   FINAL_SCRIPTSIG: 0x07,    // scriptSig definitivo (legacy/P2SH)
   FINAL_SCRIPTWITNESS: 0x08,// witness definitivo (SegWit)
+  // Taproot (BIP371):
+  TAP_KEY_SIG: 0x13,        // firma Schnorr del gasto key-path (64 o 65 bytes)
+  TAP_SCRIPT_SIG: 0x14,     // key = 0x14||pubkey||leafhash — firma de un script-path
+  TAP_LEAF_SCRIPT: 0x15,    // key = 0x15||controlblock — script + leafVersion
+  TAP_BIP32_DERIVATION: 0x16,
+  TAP_INTERNAL_KEY: 0x17,   // clave interna x-only (32 bytes)
+  TAP_MERKLE_ROOT: 0x18,    // raíz del árbol de scripts (32 bytes; ausente si no hay árbol)
 } as const;
 
 /** Tipos de clave de cada mapa de OUTPUT. */
@@ -639,6 +649,97 @@ export function finalizeInput(psbt: Psbt, inputIndex: number): FinalizeResult {
 /** ¿Está el input finalizado (tiene ya FINAL_SCRIPTWITNESS)? */
 export function isInputFinalized(map: PsbtMap): boolean {
   return getValue(map, PSBT_IN.FINAL_SCRIPTWITNESS) !== undefined;
+}
+
+// ─── Taproot (BIP371): key-path ─────────────────────────────
+
+/** Updater — clave interna x-only del input Taproot (32 bytes). */
+export function updateInputTapInternalKey(psbt: Psbt, inputIndex: number, internalXonly: Uint8Array): void {
+  if (internalXonly.length !== 32) throw new Error('la clave interna es x-only (32 bytes)');
+  setKeyPair(psbt.inputs[inputIndex], new Uint8Array([PSBT_IN.TAP_INTERNAL_KEY]), internalXonly);
+}
+
+export function getTapInternalKey(map: PsbtMap): Uint8Array | undefined {
+  return getValue(map, PSBT_IN.TAP_INTERNAL_KEY);
+}
+
+/**
+ * Updater — raíz del árbol de scripts (merkle root). Solo si la salida Taproot
+ * compromete un árbol: el firmante key-path la necesita para ajustar su clave
+ * (q = p + taggedHash("TapTweak", P ‖ merkleRoot)). Sin árbol, se omite.
+ */
+export function updateInputTapMerkleRoot(psbt: Psbt, inputIndex: number, merkleRoot: Uint8Array): void {
+  setKeyPair(psbt.inputs[inputIndex], new Uint8Array([PSBT_IN.TAP_MERKLE_ROOT]), merkleRoot);
+}
+
+export function getTapMerkleRoot(map: PsbtMap): Uint8Array | undefined {
+  return getValue(map, PSBT_IN.TAP_MERKLE_ROOT);
+}
+
+export function getTapKeySig(map: PsbtMap): Uint8Array | undefined {
+  return getValue(map, PSBT_IN.TAP_KEY_SIG);
+}
+
+export interface SignTaprootResult {
+  sigHash: Uint8Array;      // el sighash BIP341 firmado
+  signature: Uint8Array;    // firma Schnorr (64B, o 65B si hashType ≠ DEFAULT)
+}
+
+/**
+ * Signer — firma un input Taproot por KEY-PATH y guarda TAP_KEY_SIG.
+ *
+ * Aquí se ve la gran diferencia con SegWit v0: el sighash BIP341 compromete el
+ * UTXO de TODOS los inputs (importes + scriptPubKeys). Por eso el firmante lee el
+ * WITNESS_UTXO de CADA input del sobre, no solo el suyo. Luego ajusta su clave
+ * privada con la merkle root (si hay árbol) y firma con Schnorr.
+ *
+ * Con SIGHASH_DEFAULT (0x00) la firma es de 64 bytes y NO lleva byte de tipo
+ * (así se ahorra un byte en el caso común). Con otros tipos, se le añade.
+ */
+export function signTaprootKeyPathInput(
+  psbt: Psbt,
+  inputIndex: number,
+  privateKey: bigint,
+  hashType: number = SIGHASH_DEFAULT,
+  auxRand?: Uint8Array,
+): SignTaprootResult {
+  const tx = getUnsignedTx(psbt);
+
+  // El sighash Taproot necesita el UTXO de TODOS los inputs.
+  const prevouts = psbt.inputs.map((m, idx) => {
+    const u = getWitnessUtxo(m);
+    if (!u) throw new Error(`Input ${idx} sin WITNESS_UTXO: el sighash Taproot los necesita todos`);
+    return u;
+  });
+
+  const map = psbt.inputs[inputIndex];
+  const merkleRoot = getTapMerkleRoot(map);
+  const { sigHash } = computeSighashTaproot(tx, inputIndex, prevouts, { hashType });
+
+  const q = tweakPrivateKey(privateKey, merkleRoot);
+  const sig64 = hexToBytes(schnorrSign(sigHash, q, auxRand).signatureHex);
+  const signature = hashType === SIGHASH_DEFAULT ? sig64 : concat(sig64, new Uint8Array([hashType]));
+
+  setKeyPair(map, new Uint8Array([PSBT_IN.TAP_KEY_SIG]), signature);
+  return { sigHash, signature };
+}
+
+/**
+ * Finalizer — para un input Taproot key-path, el witness es UN solo elemento:
+ * la firma Schnorr. Sin script, sin dummy, sin nada más. Es el gasto más compacto
+ * y privado de Bitcoin: en la cadena solo se ve una firma de 64 bytes.
+ */
+export function finalizeTaprootKeyPathInput(psbt: Psbt, inputIndex: number): { witnessStack: Uint8Array[] } {
+  const map = psbt.inputs[inputIndex];
+  const sig = getTapKeySig(map);
+  if (!sig) throw new Error(`Input ${inputIndex} sin TAP_KEY_SIG: fírmalo primero`);
+
+  const witnessStack: Uint8Array[] = [sig];
+  setKeyPair(map, new Uint8Array([PSBT_IN.FINAL_SCRIPTWITNESS]), serializeWitnessStack(witnessStack));
+
+  const keepTypes = new Set<number>([PSBT_IN.WITNESS_UTXO, PSBT_IN.FINAL_SCRIPTWITNESS, PSBT_IN.FINAL_SCRIPTSIG]);
+  psbt.inputs[inputIndex] = map.filter(kp => keepTypes.has(kp.key[0]));
+  return { witnessStack };
 }
 
 // ─── Rol 6: EXTRACTOR ───────────────────────────────────────
