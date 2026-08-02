@@ -112,6 +112,12 @@
 
 .tme-hint { margin: 0.6rem 0 0; font-size: 0.8rem; line-height: 1.55; color: #94a3b8; }
 
+/* ─── Cosignatarios (xpubs) ─── */
+.tme-xpubs { display: flex; flex-direction: column; gap: 0.45rem; }
+.tme-xpub-row { display: flex; align-items: center; gap: 0.6rem; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 0.5rem 0.7rem; }
+.tme-xpub-tag { flex-shrink: 0; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: #f7931a; background: #f7931a18; border-radius: 6px; }
+.tme-xpub-expr { flex: 1; min-width: 0; font-size: 0.72rem; color: #7dd3fc; background: transparent; border: none; padding: 0; overflow-x: auto; white-space: nowrap; }
+
 /* ─── Hoja de script ─── */
 .tme-script { display: flex; flex-wrap: wrap; gap: 0.4rem; background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 0.9rem 1rem; }
 .tme-op { font-family: ui-monospace, monospace; font-size: 0.74rem; padding: 0.2rem 0.5rem; border-radius: 5px; background: #1e293b; color: #7dd3fc; border: 1px solid #334155; }

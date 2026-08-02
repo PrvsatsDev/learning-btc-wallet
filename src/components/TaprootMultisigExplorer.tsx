@@ -4,22 +4,30 @@
  * VER y PROBAR un multisig Taproot m-de-n, en su forma ESTÁNDAR:
  *   tr( NUMS , sortedmulti_a(m, key1, …, keyn) )
  *
- * - Muestra el descriptor estándar, la dirección bc1p y la hoja de script
- *   (multi_a con OP_CHECKSIGADD).
+ * Las claves NO son crudas: cada cosignatario aporta su xpub BIP48 real
+ * ([huella/48h/coin/0h/3h]xpub) y las claves de cada dirección se derivan por
+ * CKD (m/48'/coin'/0'/3'/0/índice), igual que una wallet o un descriptor con
+ * comodín /0/*. Puedes navegar por el índice de dirección y ver cómo cambia.
+ *
+ * - Muestra las xpubs con su origen, el descriptor con rango /0/*, la dirección
+ *   bc1p del índice elegido y la hoja de script (multi_a con OP_CHECKSIGADD).
  * - Deja FIRMAR un gasto real: eliges qué cosignatarios firman, se monta la PSBT
  *   (script-path), se finaliza el witness y se VERIFICA ejecutándolo con el
  *   intérprete + firmas Schnorr reales. Si es válido, ese gasto se aceptaría en
  *   la red.
  *
- * Toda la cripto va verificada contra vectores BIP341/BIP387. El trabajo pesado
- * (curva elíptica en JS puro) se hace con estado de carga. Ver [[feedback_debounce]].
+ * Toda la cripto va verificada contra vectores BIP32/BIP341/BIP387. El trabajo
+ * pesado (curva elíptica en JS puro) se hace con estado de carga. Ver
+ * [[feedback_debounce]] y [[project_coin_type_network]].
  */
 
 import { useState, useEffect, useMemo } from 'react';
 import { NUMS_H, sortXOnlyBIP67, descriptorChecksum } from '../crypto/descriptor';
 import { tapscriptMultisig, tapLeafHash, taprootScriptOutput } from '../crypto/tapscript';
 import { createP2TR, addressP2TR, disassemble, executeScript } from '../crypto/script';
-import { getPublicKey } from '../crypto/secp256k1';
+import {
+  masterKeyFromSeed, deriveMultisigKey, deriveChild, type MultisigKey,
+} from '../crypto/hdwallet';
 import {
   createPsbt, updateInputWitnessUtxo, updateInputTapLeafScript,
   signTaprootScriptPathInput, finalizeTaprootScriptPathInput, extractTransaction,
@@ -32,6 +40,7 @@ import type { Transaction, TxOutput } from '../crypto/transaction';
 import './TaprootMultisigExplorer.css';
 
 const MAX_N = 5;
+const MAX_INDEX = 9;
 const DEBOUNCE_MS = 250;
 
 function to32(n: bigint): Uint8Array {
@@ -48,10 +57,17 @@ function shortHex(hex: string, head = 10, tail = 6): string {
   return hex.length <= head + tail + 1 ? hex : `${hex.slice(0, head)}…${hex.slice(-tail)}`;
 }
 
-interface DerivedKeys {
+/** Cuentas BIP48 de cada cosignatario (nivel m/48'/coin'/0'/3'), con su xpub. */
+interface Accounts {
+  sig: string;
+  keys: MultisigKey[];   // uno por cosignatario, con node PRIVADO (para poder firmar)
+}
+
+/** Claves derivadas para UN índice de dirección concreto (…/0/índice). */
+interface IndexedKeys {
   sig: string;
   privs: bigint[];
-  xonly: Uint8Array[];        // x-only pubkeys (sin ordenar), índice = cosignatario
+  xonly: Uint8Array[];
 }
 
 interface MultisigInfo {
@@ -74,7 +90,7 @@ interface SpendResult {
   error?: string;
 }
 
-/** Construye el 2-de-3 (o m-de-n) estándar a partir de las x-only. */
+/** Construye el m-de-n estándar (por índice) a partir de las x-only derivadas. */
 function buildInfo(xonly: Uint8Array[], m: number, mainnet: boolean): MultisigInfo {
   const sortedXonly = sortXOnlyBIP67(xonly);
   const leaf = tapscriptMultisig(m, sortedXonly);
@@ -147,11 +163,17 @@ export function TaprootMultisigExplorer() {
   const [network, setNetwork] = useState<'mainnet' | 'testnet'>('mainnet');
   const [n, setN] = useState(3);
   const [m, setM] = useState(2);
+  const [addressIndex, setAddressIndex] = useState(0);
   const [seeds, setSeeds] = useState<string[]>(() => Array.from({ length: MAX_N }, randomHex32));
-  const [derived, setDerived] = useState<DerivedKeys | null>(null);
+  const [accounts, setAccounts] = useState<Accounts | null>(null);
+  const [indexed, setIndexed] = useState<IndexedKeys | null>(null);
   const [signers, setSigners] = useState<boolean[]>(() => [true, true, false, false, false]);
   const [spend, setSpend] = useState<SpendResult | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const mainnet = network === 'mainnet';
+  const coinType = mainnet ? 0 : 1;   // BIP44/48 coin_type: 0' mainnet, 1' testnet
+  const mEff = Math.min(m, n);
 
   const copyText = (id: string, text: string) => {
     navigator.clipboard?.writeText(text).then(() => {
@@ -160,26 +182,54 @@ export function TaprootMultisigExplorer() {
     });
   };
 
-  const sig = `${network}|${n}|${seeds.slice(0, n).join('')}`;
-  const loading = !derived || derived.sig !== sig;
+  const accSig = `${network}|${n}|${seeds.slice(0, n).join('')}`;
+  const idxSig = accounts ? `${accounts.sig}|${addressIndex}` : '';
+  const loading = !accounts || accounts.sig !== accSig || !indexed || indexed.sig !== idxSig;
 
-  // ── Trabajo CARO: derivar las claves (n mults de curva elíptica) ──
+  // ── Trabajo CARO nivel 1: derivar las CUENTAS BIP48 (ruta hardened) ──
+  // m/48'/coin'/0'/3'  → una xpub por cosignatario (nodo privado para firmar).
   useEffect(() => {
     const timer = setTimeout(() => {
-      const privs = seeds.slice(0, n).map(s => bytesToBigint(hexToBytes(s)));
-      const xonly = privs.map(p => to32(getPublicKey(p)!.x));
-      setDerived({ sig, privs, xonly });
+      const keys = seeds.slice(0, n).map(s =>
+        deriveMultisigKey(masterKeyFromSeed(hexToBytes(s)), 'p2tr', 0, coinType, mainnet));
+      setAccounts({ sig: accSig, keys });
       setSpend(null);
     }, DEBOUNCE_MS);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [network, n, seeds]);
 
-  // ── Trabajo medio: montar descriptor/dirección (1 op de curva por m) ──
+  // ── Trabajo CARO nivel 2: derivar el índice de dirección (…/0/índice) ──
+  useEffect(() => {
+    if (!accounts) return;
+    const timer = setTimeout(() => {
+      const privs: bigint[] = [];
+      const xonly: Uint8Array[] = [];
+      for (const k of accounts.keys) {
+        const change = deriveChild(k.node, 0, false);         // rama externa (receive)
+        const leaf = deriveChild(change, addressIndex, false); // índice de dirección
+        privs.push(leaf.privateKey);
+        xonly.push(to32(leaf.publicKey!.x));
+      }
+      setIndexed({ sig: `${accounts.sig}|${addressIndex}`, privs, xonly });
+      setSpend(null);
+    }, DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [accounts, addressIndex]);
+
+  // ── Trabajo medio: descriptor/dirección del índice actual ──
   const info = useMemo(() => {
-    if (!derived) return null;
-    return buildInfo(derived.xonly, Math.min(m, n), network === 'mainnet');
-  }, [derived, m, n, network]);
+    if (!indexed) return null;
+    return buildInfo(indexed.xonly, mEff, mainnet);
+  }, [indexed, mEff, mainnet]);
+
+  // ── Descriptor de wallet con rango /0/* (la forma REAL, con xpubs) ──
+  const rangedDescriptor = useMemo(() => {
+    if (!accounts) return null;
+    const exprs = accounts.keys.map(k => `${k.keyExpression}/0/*`);
+    const body = `tr(${NUMS_H},sortedmulti_a(${mEff},${exprs.join(',')}))`;
+    return `${body}#${descriptorChecksum(body)}`;
+  }, [accounts, mEff]);
 
   const selectedCount = signers.slice(0, n).filter(Boolean).length;
 
@@ -194,8 +244,8 @@ export function TaprootMultisigExplorer() {
   };
 
   const doSpend = () => {
-    if (!info || !derived) return;
-    const chosen = derived.privs.filter((_, i) => signers[i]);
+    if (!info || !indexed) return;
+    const chosen = indexed.privs.filter((_, i) => signers[i]);
     setSpend(runSpend(info, chosen, 100_000n));
   };
 
@@ -206,8 +256,9 @@ export function TaprootMultisigExplorer() {
         <h1>Taproot Multisig Explorer</h1>
         <p className="tme-subtitle">
           El multisig <strong>m-de-n estándar</strong> de Taproot:
-          <code> tr(NUMS, sortedmulti_a(m,…))</code>. Míralo y <strong>pruébalo</strong> —
-          firma un gasto real por script-path y comprueba que el witness desbloquea el UTXO.
+          <code> tr(NUMS, sortedmulti_a(m,…))</code>, derivado de <strong>xpubs BIP48 reales</strong>.
+          Navega por el índice de dirección, míralo y <strong>pruébalo</strong> — firma un gasto
+          real por script-path y comprueba que el witness desbloquea el UTXO.
         </p>
       </header>
 
@@ -223,8 +274,8 @@ export function TaprootMultisigExplorer() {
         <div className="tme-control">
           <span className="tme-control-label">Red</span>
           <div className="tme-toggle">
-            <button className={network === 'mainnet' ? 'active' : ''} onClick={() => setNetwork('mainnet')}>mainnet</button>
-            <button className={network === 'testnet' ? 'active' : ''} onClick={() => setNetwork('testnet')}>testnet</button>
+            <button className={mainnet ? 'active' : ''} onClick={() => setNetwork('mainnet')}>mainnet</button>
+            <button className={!mainnet ? 'active' : ''} onClick={() => setNetwork('testnet')}>testnet</button>
           </div>
         </div>
         <label className="tme-control">
@@ -232,29 +283,55 @@ export function TaprootMultisigExplorer() {
           <input type="range" min={2} max={MAX_N} value={n} onChange={e => setKeysTotal(Number(e.target.value))} />
         </label>
         <label className="tme-control">
-          <span className="tme-control-label">Umbral · <strong>m = {Math.min(m, n)}</strong></span>
-          <input type="range" min={1} max={n} value={Math.min(m, n)} onChange={e => { setM(Number(e.target.value)); setSpend(null); }} />
+          <span className="tme-control-label">Umbral · <strong>m = {mEff}</strong></span>
+          <input type="range" min={1} max={n} value={mEff} onChange={e => { setM(Number(e.target.value)); setSpend(null); }} />
+        </label>
+        <label className="tme-control">
+          <span className="tme-control-label">Índice dirección · <strong>…/0/{addressIndex}</strong></span>
+          <input type="range" min={0} max={MAX_INDEX} value={addressIndex} onChange={e => { setAddressIndex(Number(e.target.value)); setSpend(null); }} />
         </label>
         <button className="tme-regen" onClick={() => { setSeeds(Array.from({ length: MAX_N }, randomHex32)); setSpend(null); }}>
-          ↻ Regenerar claves
+          ↻ Regenerar semillas
         </button>
       </div>
 
       <div className="tme-scheme">
-        Esquema: <strong>{Math.min(m, n)}-de-{n}</strong>
-        {info && <span className="tme-scheme-note"> · {network} · hoja multi_a con OP_CHECKSIGADD</span>}
+        Esquema: <strong>{mEff}-de-{n}</strong>
+        {info && <span className="tme-scheme-note"> · {network} · coin_type {coinType}' · dirección …/0/{addressIndex}</span>}
       </div>
 
       {loading && (
-        <div className="tme-loading"><span className="tme-spinner" /> Derivando claves (curva elíptica en JS, lento a propósito)…</div>
+        <div className="tme-loading"><span className="tme-spinner" /> Derivando xpubs y claves por CKD (curva elíptica en JS, lento a propósito)…</div>
       )}
 
-      {info && !loading && (
+      {info && accounts && !loading && (
         <>
+          {/* ── Cosignatarios (xpubs BIP48) ── */}
+          <section className="tme-section">
+            <span className="tme-label">Cosignatarios — xpub BIP48 con origen</span>
+            <div className="tme-xpubs">
+              {accounts.keys.map((k, i) => (
+                <div key={i} className="tme-xpub-row">
+                  <span className="tme-xpub-tag">{String.fromCharCode(65 + i)}</span>
+                  <code className="tme-xpub-expr" title={k.keyExpression}>
+                    [{k.fingerprint}/{k.path.replace(/^m\//, '').replace(/'/g, 'h')}]{shortHex(k.xpub, 12, 8)}
+                  </code>
+                  <button className="tme-copy" onClick={() => copyText(`xpub${i}`, `${k.keyExpression}/0/*`)}>
+                    {copiedId === `xpub${i}` ? '✓' : 'copiar'}
+                  </button>
+                </div>
+              ))}
+            </div>
+            <p className="tme-hint">
+              Cada cosignatario comparte solo su <strong>xpub</strong> (nunca la semilla). Las claves de
+              cada dirección salen por derivación pública/privada CKD: <code>…/3'/0/{addressIndex}</code>.
+            </p>
+          </section>
+
           {/* ── Dirección ── */}
           <section className="tme-section">
             <div className="tme-label-row">
-              <span className="tme-label">Dirección Taproot (recibe aquí)</span>
+              <span className="tme-label">Dirección Taproot · índice …/0/{addressIndex}</span>
               <button className="tme-copy" onClick={() => copyText('addr', info.address)}>{copiedId === 'addr' ? '✓ copiado' : 'copiar'}</button>
             </div>
             <div className="tme-address"><code>{info.address}</code></div>
@@ -263,19 +340,21 @@ export function TaprootMultisigExplorer() {
           {/* ── Descriptor ── */}
           <section className="tme-section">
             <div className="tme-label-row">
-              <span className="tme-label">Descriptor estándar (BIP-387)</span>
-              <button className="tme-copy" onClick={() => copyText('desc', info.descriptor)}>{copiedId === 'desc' ? '✓ copiado' : 'copiar'}</button>
+              <span className="tme-label">Descriptor de wallet (con rango /0/*)</span>
+              <button className="tme-copy" onClick={() => copyText('desc', rangedDescriptor ?? '')}>{copiedId === 'desc' ? '✓ copiado' : 'copiar'}</button>
             </div>
-            <div className="tme-descriptor"><code>{info.descriptor}</code></div>
+            <div className="tme-descriptor"><code>{rangedDescriptor}</code></div>
             <p className="tme-hint">
-              <code>sortedmulti_a</code> ordena las claves (BIP67), así el orden de los
-              cosignatarios no cambia la dirección. El <code>#…</code> final es el checksum.
+              Este es el descriptor REAL de la wallet: contiene las xpubs con su origen y el comodín
+              <code> /0/*</code>. Cada índice produce una dirección distinta (la de arriba es la
+              <code> {addressIndex}</code>). <code>sortedmulti_a</code> ordena las claves derivadas
+              (BIP67), así el orden de los cosignatarios no cambia la dirección.
             </p>
           </section>
 
           {/* ── Hoja de script ── */}
           <section className="tme-section">
-            <span className="tme-label">Hoja de script (multi_a)</span>
+            <span className="tme-label">Hoja de script (multi_a) del índice {addressIndex}</span>
             <div className="tme-script">
               {disassemble(info.leaf).map((op, i) => (
                 <span key={i} className={`tme-op ${op.startsWith('OP_') ? 'kw' : ''}`}>
@@ -285,13 +364,13 @@ export function TaprootMultisigExplorer() {
             </div>
             <p className="tme-hint">
               Cada clave suma 1 al contador con <code>OP_CHECKSIG</code>/<code>OP_CHECKSIGADD</code>;
-              al final <code>OP_{Math.min(m, n)} OP_NUMEQUAL</code> exige exactamente {Math.min(m, n)} firmas.
+              al final <code>OP_{mEff} OP_NUMEQUAL</code> exige exactamente {mEff} firmas.
             </p>
           </section>
 
           {/* ── Probar gasto ── */}
           <section className="tme-section tme-spend">
-            <span className="tme-label">Prueba un gasto — ¿quién firma?</span>
+            <span className="tme-label">Prueba un gasto (índice …/0/{addressIndex}) — ¿quién firma?</span>
             <div className="tme-signers">
               {Array.from({ length: n }, (_, i) => (
                 <button key={i} className={`tme-signer ${signers[i] ? 'on' : ''}`} onClick={() => toggleSigner(i)}>
@@ -301,8 +380,8 @@ export function TaprootMultisigExplorer() {
               ))}
             </div>
             <div className="tme-spend-bar">
-              <span className={`tme-count ${selectedCount >= Math.min(m, n) ? 'ok' : 'low'}`}>
-                {selectedCount} de {Math.min(m, n)} necesarias
+              <span className={`tme-count ${selectedCount >= mEff ? 'ok' : 'low'}`}>
+                {selectedCount} de {mEff} necesarias
               </span>
               <button className="tme-sign-btn" onClick={doSpend}>Firmar y probar gasto →</button>
             </div>
@@ -314,7 +393,7 @@ export function TaprootMultisigExplorer() {
                 <>
                   <div className={`tme-verdict ${spend.valid ? 'good' : 'bad'}`}>
                     {spend.valid
-                      ? '✓ Witness válido — este gasto 2-de-3 se aceptaría en la red'
+                      ? `✓ Witness válido — este gasto ${mEff}-de-${n} se aceptaría en la red`
                       : '✗ El witness NO valida'}
                   </div>
                   <span className="tme-label tme-label--mt">Witness montado</span>
