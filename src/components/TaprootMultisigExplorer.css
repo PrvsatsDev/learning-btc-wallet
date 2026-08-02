@@ -114,9 +114,33 @@
 
 /* ─── Cosignatarios (xpubs) ─── */
 .tme-xpubs { display: flex; flex-direction: column; gap: 0.45rem; }
+.tme-xpub-list { display: flex; flex-direction: column; gap: 0.45rem; }
 .tme-xpub-row { display: flex; align-items: center; gap: 0.6rem; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 0.5rem 0.7rem; }
 .tme-xpub-tag { flex-shrink: 0; width: 1.5rem; height: 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700; color: #f7931a; background: #f7931a18; border-radius: 6px; }
 .tme-xpub-expr { flex: 1; min-width: 0; font-size: 0.72rem; color: #7dd3fc; background: transparent; border: none; padding: 0; overflow-x: auto; white-space: nowrap; }
+
+/* ─── Campos editables de xpub ─── */
+.tme-xpub-actions { display: flex; gap: 0.4rem; }
+.tme-xpub-field { display: flex; align-items: center; gap: 0.6rem; }
+.tme-xpub-input {
+  flex: 1; min-width: 0; padding: 0.5rem 0.7rem; font-size: 0.75rem;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  background: #0f172a; color: #e2e8f0; border: 1px solid #334155; border-radius: 8px;
+}
+.tme-xpub-input:focus { outline: none; border-color: #f7931a; }
+.tme-xpub-input.ok { border-color: #22c55e66; }
+.tme-xpub-input.bad { border-color: #ef444466; }
+.tme-xpub-status { flex-shrink: 0; width: 12rem; font-size: 0.72rem; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tme-xpub-status.ok { color: #4ade80; width: auto; }
+.tme-xpub-status.bad { color: #fca5a5; }
+
+/* ─── Verificación ─── */
+.tme-checks { display: flex; flex-direction: column; gap: 0.4rem; }
+.tme-check { font-size: 0.83rem; padding: 0.5rem 0.8rem; border-radius: 8px; }
+.tme-check.ok { color: #86efac; background: #0f2a1a; border: 1px solid #22c55e33; }
+.tme-check.bad { color: #fca5a5; background: #2a1212; border: 1px solid #ef444433; }
+
+.tme-loading--idle { background: #16233a; border-color: #33415566; color: #94a3b8; }
 
 /* ─── Hoja de script ─── */
 .tme-script { display: flex; flex-wrap: wrap; gap: 0.4rem; background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 0.9rem 1rem; }
