@@ -137,6 +137,26 @@ ahí que Coinkite no dé un método de verificación. Referencias:
 > como inspiración y, en su caso, sigue el
 > [uso en equipo air-gapped](#uso-en-equipo-air-gapped).
 
+### Fase 4 — UI visual, multisig y Taproot
+
+Herramientas interactivas estilo Sparrow/Liana. Toda la criptografía sigue implementada
+desde cero y verificada contra vectores oficiales (BIP32 / BIP341 / BIP342 / BIP350 / BIP387).
+
+| Módulo | Descripción | Archivos |
+|--------|-------------|----------|
+| **PSBT (BIP174)** | Sobre de firma parcial: los 6 roles (creator → extractor), recorrido visual paso a paso mostrando cómo "firmar = añadir pares clave-valor" | `src/crypto/psbt.ts`, `src/components/PsbtExplorer.tsx` |
+| **Multisig P2WSH** | `wsh(sortedmulti(m,n))`, descriptores + checksum (BIP380), direcciones, modo watch-only (pegar xpubs, CKDpub) | `src/crypto/descriptor.ts`, `src/components/MultisigExplorer.tsx` |
+| **Taproot** | Tweak key-path (BIP341), script-path (BIP342: TapTree, control block, `OP_CHECKSIGADD`), sighash BIP341, firmas Schnorr | `src/crypto/taproot.ts`, `src/crypto/tapscript.ts`, `src/crypto/sighash-taproot.ts` |
+| **Taproot Multisig** | `tr(NUMS, sortedmulti_a(m,…))` watch-only: pega tus xpubs, deriva por rama/índice (CKDpub) y consulta el **saldo real** vía mempool.space | `src/components/TaprootMultisigExplorer.tsx` |
+| **MuSig2 (BIP327)** | Firma Schnorr agregada n-de-n: agregación de claves con coeficientes (defensa rogue-key), dos nonces + coef `b` (las 2 rondas), firmas parciales → una sola firma | `src/crypto/musig2.ts`, `src/components/MuSig2Explorer.tsx` |
+| **Timelocks (Liana)** | `OP_CHECKSEQUENCEVERIFY`/`OP_CHECKLOCKTIMEVERIFY` en el intérprete (BIP68/112/65) y bóveda Taproot con ruta de recuperación con retardo | `src/crypto/timelock.ts`, `src/components/TimelockExplorer.tsx` |
+
+Además: una sección de **Referencia** con todos los BIPs usados en la app (`src/components/BipReference.tsx`).
+
+Cada explorador hace algo real y verificable: montar el descriptor y las direcciones, firmar
+un gasto Taproot script-path y ejecutar el witness con el intérprete, o agregar n firmas
+MuSig2 y comprobar que verifican como una sola firma Schnorr.
+
 ## Uso en equipo air-gapped
 
 La herramienta **Entropy Auditor** funciona 100% en local: no hace ninguna llamada de red,
@@ -178,8 +198,16 @@ la garantía: sin red, aunque algo lo intentara, nada puede salir.
 
 - [x] **Fase 1** — Fundamentos criptográficos (SHA-256, RIPEMD-160, secp256k1, Base58Check)
 - [x] **Fase 2** — Primitivas Bitcoin (firmas, UTXOs, transacciones, scripts, HD Wallets)
-- [ ] **Fase 3** — Wallet funcional (seed phrase, derivación, conexión a red, broadcast)
-- [ ] **Fase 4** — UI visual estilo Sparrow/Liana
+- [x] **Fase 3** — Wallet funcional (seed phrase, derivación, conexión a red, firma BIP143 y broadcast)
+- [ ] **Fase 4** — UI visual estilo Sparrow/Liana *(en curso)*
+  - [x] PSBT (BIP174) y multisig P2WSH con descriptores watch-only
+  - [x] Taproot completo (key-path, script-path, sighash BIP341) y multisig `tr(NUMS, sortedmulti_a)`
+  - [x] MuSig2 (BIP327): firma Schnorr agregada n-de-n
+  - [x] Timelocks `OP_CSV`/`OP_CLTV` y bóveda de recuperación estilo Liana
+  - [x] Taproot Multisig watch-only con tus xpubs + saldo real vía mempool.space
+  - [ ] Visualizador navegable del árbol de derivación BIP32
+  - [ ] Vista inputs → outputs de una transacción
+  - [ ] Timeline de UTXOs por dirección
 
 ## Licencia
 

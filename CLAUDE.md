@@ -41,11 +41,15 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 - [x] Construir transacciones (selección de UTXOs, fees, cambio)
 - [x] Firmar con BIP143 sighash + ECDSA y broadcast a la red
 
-### Fase 4 — UI visual (Sparrow/Liana-style)
+### Fase 4 — UI visual (Sparrow/Liana-style) 🚧 en curso
+- [x] Multisig P2WSH + PSBT (BIP174) con descriptores watch-only
+- [x] Taproot completo (key-path, script-path, sighash BIP341) + `tr(NUMS, sortedmulti_a)`
+- [x] MuSig2 (BIP327): firma Schnorr agregada n-de-n
+- [x] Timelocks OP_CSV/OP_CLTV + bóveda de recuperación estilo Liana
+- [x] Taproot Multisig watch-only con xpubs del usuario + saldo real vía mempool.space
 - [ ] Visualizador del árbol de derivación de claves (BIP32 tree)
 - [ ] Vista de transacción: inputs → outputs con amounts
 - [ ] Timeline de UTXOs por dirección
-- [ ] Multisig y timelocks (inspirado en Liana)
 
 ---
 
@@ -61,10 +65,12 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 
 ## Primer paso al volver
 
-Fase 3 completada: la wallet ya firma y emite transacciones P2WPKH reales en
-testnet4/signet/mainnet. El siguiente paso natural es **Fase 4 — UI visual
-estilo Sparrow/Liana**: árbol de derivación BIP32 navegable, vista inputs→outputs
-de una tx, timeline de UTXOs por dirección, y empezar con multisig/timelocks.
+Fase 4 muy avanzada: ya hay exploradores de multisig P2WSH, PSBT, Taproot
+(key/script-path), Taproot Multisig watch-only (xpubs propias + saldo real vía
+mempool.space), MuSig2 y timelocks estilo Liana — toda la cripto desde cero y
+verificada contra vectores. Lo que **queda de Fase 4** es la parte más "visual
+Sparrow/Liana": árbol de derivación BIP32 navegable, vista inputs→outputs de una
+tx, y timeline de UTXOs por dirección.
 
 ---
 
