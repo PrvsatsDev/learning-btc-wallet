@@ -28,11 +28,15 @@ import {
   masterKeyFromSeed, deriveMultisigKey, parseXpub, deriveChildPublic, type HDNode,
 } from '../crypto/hdwallet';
 import { bytesToBigint } from '../crypto/hmac';
+import {
+  getAddressInfo, calculateBalance, satsToBtc, formatSats, type Network,
+} from '../api/mempool';
 import './TaprootMultisigExplorer.css';
 
 const MAX_N = 5;
 const MAX_INDEX = 9;
 const DEBOUNCE_MS = 300;
+const SCAN_GAP = 5;   // direcciones a escanear por rama (gap limit didáctico)
 
 function to32(n: bigint): Uint8Array {
   const out = new Uint8Array(32);
@@ -126,6 +130,21 @@ interface Derived {
   xonly: Uint8Array[];
 }
 
+interface ScanRow {
+  branch: 0 | 1;
+  index: number;
+  address: string;
+  confirmed: number;
+  pending: number;
+  txs: number;
+}
+interface ScanResult {
+  rows: ScanRow[];
+  totalConfirmed: number;
+  totalPending: number;
+  network: Network;
+}
+
 export function TaprootMultisigExplorer() {
   const [n, setN] = useState(3);
   const [m, setM] = useState(2);
@@ -136,6 +155,10 @@ export function TaprootMultisigExplorer() {
   );
   const [derived, setDerived] = useState<Derived | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [queryTestnet, setQueryTestnet] = useState<'testnet4' | 'signet'>('testnet4');
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const mEff = Math.min(m, n);
 
@@ -190,6 +213,48 @@ export function TaprootMultisigExplorer() {
     return `${body}#${descriptorChecksum(body)}`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [xpubInputs, n, branch, mEff, ready]);
+
+  const queryNetwork: Network = mainnet ? 'mainnet' : queryTestnet;
+
+  // El resultado del escaneo caduca si cambia la configuración del multisig/red.
+  useEffect(() => {
+    setScanResult(null);
+    setScanError(null);
+  }, [sig, mEff, queryNetwork]);
+
+  // ── Escaneo de saldo real en mempool.space (watch-only puro) ──
+  // Recorre las primeras SCAN_GAP direcciones de ambas ramas (recibir/cambio),
+  // como haría una wallet real con su "gap limit". Solo lecturas: sin claves.
+  const scanBalance = async () => {
+    if (!ready) return;
+    setScanning(true);
+    setScanError(null);
+    setScanResult(null);
+    try {
+      const rows: ScanRow[] = [];
+      let totalConfirmed = 0;
+      let totalPending = 0;
+      for (const br of [0, 1] as const) {
+        // Nodo de rama por cosignatario (se deriva una vez y se reutiliza por índice).
+        const branchNodes = cosigners.map(c => deriveChildPublic(c.node, br));
+        for (let idx = 0; idx < SCAN_GAP; idx++) {
+          const xo = branchNodes.map(bn => to32(deriveChildPublic(bn, idx).publicKey!.x));
+          const { address } = buildInfo(xo, mEff, mainnet);
+          const infoAddr = await getAddressInfo(address, queryNetwork);
+          const bal = calculateBalance(infoAddr);
+          const txs = infoAddr.chain_stats.tx_count + infoAddr.mempool_stats.tx_count;
+          totalConfirmed += bal.confirmed;
+          totalPending += bal.pending;
+          rows.push({ branch: br, index: idx, address, confirmed: bal.confirmed, pending: bal.pending, txs });
+        }
+      }
+      setScanResult({ rows, totalConfirmed, totalPending, network: queryNetwork });
+    } catch (e) {
+      setScanError((e as Error).message);
+    } finally {
+      setScanning(false);
+    }
+  };
 
   const setKeysTotal = (value: number) => {
     setN(value);
@@ -316,6 +381,63 @@ export function TaprootMultisigExplorer() {
               multisig (recibir, auditar saldo). Para <strong>gastar</strong> harían falta {mEff} de los
               cosignatarios firmando con sus claves privadas (que aquí no están).
             </p>
+          </section>
+
+          {/* ── Saldo real (mempool.space) ── */}
+          <section className="tme-section tme-balance">
+            <div className="tme-label-row">
+              <span className="tme-label">Saldo real · mempool.space</span>
+              {!mainnet && (
+                <div className="tme-toggle tme-toggle--sm">
+                  <button className={queryTestnet === 'testnet4' ? 'active' : ''} onClick={() => setQueryTestnet('testnet4')}>testnet4</button>
+                  <button className={queryTestnet === 'signet' ? 'active' : ''} onClick={() => setQueryTestnet('signet')}>signet</button>
+                </div>
+              )}
+            </div>
+            <p className="tme-hint tme-hint--top">
+              Escanea las primeras {SCAN_GAP} direcciones de cada rama (recibir y cambio), como una
+              wallet con su <em>gap limit</em>. Solo lecturas públicas: un saldo aquí es 100 %
+              verificable <strong>sin ninguna clave privada</strong>. Consultando <code>{queryNetwork}</code>.
+            </p>
+            <button className="tme-sign-btn" onClick={scanBalance} disabled={scanning}>
+              {scanning ? 'Escaneando…' : `Consultar saldo (${SCAN_GAP * 2} direcciones) →`}
+            </button>
+
+            {scanning && (
+              <div className="tme-loading"><span className="tme-spinner" /> Derivando direcciones y consultando mempool.space…</div>
+            )}
+            {scanError && <div className="tme-verdict bad">✗ {scanError}</div>}
+
+            {scanResult && (
+              <>
+                <div className="tme-balance-total">
+                  <div className="tme-balance-big">{satsToBtc(scanResult.totalConfirmed + scanResult.totalPending)} BTC</div>
+                  <div className="tme-balance-sub">
+                    <span>confirmado: <strong>{formatSats(scanResult.totalConfirmed)}</strong></span>
+                    {scanResult.totalPending !== 0 && <span>pendiente: <strong>{formatSats(scanResult.totalPending)}</strong></span>}
+                  </div>
+                </div>
+                <div className="tme-scan-rows">
+                  {scanResult.rows.map((r, i) => {
+                    const active = r.txs > 0 || r.confirmed + r.pending > 0;
+                    return (
+                      <div key={i} className={`tme-scan-row ${active ? 'active' : ''}`}>
+                        <span className="tme-scan-path">/{r.branch}/{r.index}</span>
+                        <code className="tme-scan-addr">{shortHex(r.address, 12, 8)}</code>
+                        <span className="tme-scan-txs">{r.txs} tx</span>
+                        <span className="tme-scan-bal">{formatSats(r.confirmed + r.pending)}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+                {scanResult.rows.every(r => r.txs === 0) && (
+                  <p className="tme-hint">
+                    Ninguna dirección tiene actividad (normal con xpubs de ejemplo). Pega una xpub real
+                    con historial para ver su saldo.
+                  </p>
+                )}
+              </>
+            )}
           </section>
 
           {/* ── Cosignatarios parseados ── */}
