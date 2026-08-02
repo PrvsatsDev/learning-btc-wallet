@@ -53,7 +53,17 @@ export const OP = {
   OP_VERIFY: 0x69,
   OP_RETURN: 0x6a,
 
+  // Timelocks. Antes eran OP_NOP2/OP_NOP3 (no hacían nada); se "reciclaron" con
+  // un soft-fork para dar timelocks a nivel de script sin romper nodos viejos.
+  //   OP_CHECKLOCKTIMEVERIFY (BIP65): timelock ABSOLUTO (contra nLockTime de la tx)
+  //   OP_CHECKSEQUENCEVERIFY (BIP112): timelock RELATIVO (contra nSequence, BIP68)
+  // Ambos MIRAN el tope de la pila pero NO lo sacan: por eso el patrón típico es
+  //   <N> OP_CHECKSEQUENCEVERIFY OP_DROP …
+  OP_CHECKLOCKTIMEVERIFY: 0xb1,
+  OP_CHECKSEQUENCEVERIFY: 0xb2,
+
   // Stack
+  OP_DROP: 0x75,
   OP_DUP: 0x76,
 
   // Crypto
@@ -96,15 +106,33 @@ export interface ScriptExecutionResult {
   error?: string;
 }
 
+/**
+ * Contexto de la transacción que gasta, necesario para los timelocks.
+ * Sin él, OP_CHECKLOCKTIMEVERIFY/OP_CHECKSEQUENCEVERIFY no tienen contra qué comparar.
+ */
+export interface ScriptContext {
+  txVersion?: number;   // version de la tx (CSV exige >= 2)
+  nSequence?: number;   // nSequence del input que se gasta (BIP68)
+  nLockTime?: number;   // nLockTime de la tx (BIP65)
+}
+
+// Umbral que separa altura de bloque de timestamp Unix en nLockTime/OP_CLTV.
+const LOCKTIME_THRESHOLD = 500000000;
+// Banderas del nSequence según BIP68 (relative locktime).
+const SEQUENCE_DISABLE_FLAG = 0x80000000;  // bit 31: si está, NO hay relative locktime
+const SEQUENCE_TYPE_FLAG = 0x00400000;     // bit 22: 0 = bloques, 1 = unidades de 512s
+const SEQUENCE_VALUE_MASK = 0x0000ffff;    // bits 0..15: el valor del retardo
+
 // ─── Intérprete ─────────────────────────────────────────────
 
 /**
  * Ejecuta un script Bitcoin (scriptSig + scriptPubKey concatenados).
- * Solo soporta los opcodes necesarios para P2PKH.
+ * Soporta los opcodes de P2PKH, multisig (clásico y Taproot) y timelocks.
  */
 export function executeScript(
   script: Uint8Array,
-  checkSigFn?: (sig: Uint8Array, pubKey: Uint8Array) => boolean
+  checkSigFn?: (sig: Uint8Array, pubKey: Uint8Array) => boolean,
+  ctx: ScriptContext = {},
 ): ScriptExecutionResult {
   const stack: Uint8Array[] = [];
   const steps: ScriptStep[] = [];
@@ -347,6 +375,75 @@ export function executeScript(
             stack: stackToHex(),
             consumed: [a.toString(16).padStart(2, '0'), b.toString(16).padStart(2, '0')],
             produced: [eq ? '01' : '(empty)'],
+          });
+          break;
+        }
+
+        case OP.OP_DROP: {
+          const dropped = stack.pop()!;
+          steps.push({
+            opcode, opcodeName: 'OP_DROP', description: 'Descartar el tope de la pila',
+            stack: stackToHex(), consumed: [bytesToHex(dropped)], produced: [],
+          });
+          break;
+        }
+
+        case OP.OP_CHECKLOCKTIMEVERIFY: {
+          // Timelock ABSOLUTO (BIP65). Mira el tope (NO lo saca) y lo compara con
+          // el nLockTime de la tx. Falla si el momento aún no ha llegado.
+          if (stack.length < 1) throw new Error('OP_CLTV: pila vacía');
+          const required = scriptNumFull(stack[stack.length - 1]);
+          const txLock = ctx.nLockTime ?? 0;
+          let err: string | null = null;
+          if (required < 0) err = 'OP_CLTV: locktime negativo';
+          else if ((required < LOCKTIME_THRESHOLD) !== (txLock < LOCKTIME_THRESHOLD))
+            err = 'OP_CLTV: se mezcla altura de bloque con timestamp (ambos deben ser del mismo tipo)';
+          else if (required > txLock)
+            err = `OP_CLTV: aún no se puede gastar (exige ${required}, la tx aporta nLockTime=${txLock})`;
+          else if ((ctx.nSequence ?? 0xffffffff) === 0xffffffff)
+            err = 'OP_CLTV: el input tiene nSequence=0xffffffff, que DESHABILITA nLockTime';
+          if (err) {
+            steps.push({ opcode, opcodeName: 'OP_CHECKLOCKTIMEVERIFY', description: `${err} — ¡FALLO!`, stack: stackToHex(), consumed: [], produced: [] });
+            return { steps, success: false, finalStack: stackToHex(), error: err };
+          }
+          steps.push({
+            opcode, opcodeName: 'OP_CHECKLOCKTIMEVERIFY',
+            description: `Timelock absoluto cumplido (exige ${required} ≤ nLockTime=${txLock}) ✓ — deja el valor en la pila`,
+            stack: stackToHex(), consumed: [], produced: [],
+          });
+          break;
+        }
+
+        case OP.OP_CHECKSEQUENCEVERIFY: {
+          // Timelock RELATIVO (BIP112 + BIP68). Mira el tope (NO lo saca) y lo
+          // compara con el nSequence del input, que codifica cuánto debe madurar
+          // el UTXO desde que se confirmó.
+          if (stack.length < 1) throw new Error('OP_CSV: pila vacía');
+          const required = scriptNumFull(stack[stack.length - 1]);
+          let err: string | null = null;
+          if (required < 0) {
+            err = 'OP_CSV: valor negativo';
+          } else if ((required & SEQUENCE_DISABLE_FLAG) === 0) {
+            // La comprobación solo aplica si el bit de desactivación está a 0.
+            const txSeq = ctx.nSequence ?? 0;
+            if ((ctx.txVersion ?? 1) < 2)
+              err = 'OP_CSV: la tx debe ser version ≥ 2 (regla BIP68)';
+            else if ((txSeq & SEQUENCE_DISABLE_FLAG) !== 0)
+              err = 'OP_CSV: el nSequence del input desactiva el relative locktime (bit 31)';
+            else if ((required & SEQUENCE_TYPE_FLAG) !== (txSeq & SEQUENCE_TYPE_FLAG))
+              err = 'OP_CSV: tipos incompatibles (uno cuenta bloques y el otro tiempo)';
+            else if ((required & SEQUENCE_VALUE_MASK) > (txSeq & SEQUENCE_VALUE_MASK))
+              err = `OP_CSV: aún no madura (exige ${required & SEQUENCE_VALUE_MASK}, el input aporta ${txSeq & SEQUENCE_VALUE_MASK})`;
+          }
+          if (err) {
+            steps.push({ opcode, opcodeName: 'OP_CHECKSEQUENCEVERIFY', description: `${err} — ¡FALLO!`, stack: stackToHex(), consumed: [], produced: [] });
+            return { steps, success: false, finalStack: stackToHex(), error: err };
+          }
+          const unit = (required & SEQUENCE_TYPE_FLAG) ? 'unidades de 512s' : 'bloques';
+          steps.push({
+            opcode, opcodeName: 'OP_CHECKSEQUENCEVERIFY',
+            description: `Timelock relativo cumplido (${required & SEQUENCE_VALUE_MASK} ${unit}) ✓ — deja el valor en la pila`,
+            stack: stackToHex(), consumed: [], produced: [],
           });
           break;
         }
@@ -679,6 +776,39 @@ function encodeScriptNum(value: number): Uint8Array {
   if (value === 0) return new Uint8Array(0);
   if (value < 0 || value > 0x7f) throw new Error('encodeScriptNum solo maneja 0..127');
   return new Uint8Array([value]);
+}
+
+/**
+ * Lee un "script number" completo (LE, con signo tipo CScriptNum). A diferencia
+ * de readScriptNum, maneja bien valores de hasta 5 bytes (alturas de bloque,
+ * timestamps Unix, nSequence), sin los problemas del OR bit a bit de 32 bits.
+ */
+function scriptNumFull(item: Uint8Array): number {
+  if (item.length === 0) return 0;
+  let result = 0;
+  for (let i = 0; i < item.length; i++) result += item[i] * 2 ** (8 * i);
+  // El bit alto del byte más significativo es el signo.
+  if (item[item.length - 1] & 0x80) {
+    result -= 0x80 * 2 ** (8 * (item.length - 1));
+    result = -result;
+  }
+  return result;
+}
+
+/**
+ * Codifica un entero como "script number" (LE, mínimo, con byte de signo si hace
+ * falta). Sirve para empujar timelocks (alturas, retardos) al construir scripts.
+ */
+export function encodeScriptNumFull(value: number): Uint8Array {
+  if (value === 0) return new Uint8Array(0);
+  const negative = value < 0;
+  let abs = Math.abs(value);
+  const bytes: number[] = [];
+  while (abs > 0) { bytes.push(abs & 0xff); abs = Math.floor(abs / 256); }
+  // Si el bit alto del último byte está puesto, añadimos un byte solo para el signo.
+  if (bytes[bytes.length - 1] & 0x80) bytes.push(negative ? 0x80 : 0x00);
+  else if (negative) bytes[bytes.length - 1] |= 0x80;
+  return new Uint8Array(bytes);
 }
 
 function hexToBytes(hex: string): Uint8Array {
