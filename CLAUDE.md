@@ -47,7 +47,7 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 - [x] MuSig2 (BIP327): firma Schnorr agregada n-de-n
 - [x] Timelocks OP_CSV/OP_CLTV + bóveda de recuperación estilo Liana
 - [x] Taproot Multisig watch-only con xpubs del usuario + saldo real vía mempool.space
-- [ ] Visualizador del árbol de derivación de claves (BIP32 tree)
+- [x] Visualizador del árbol de derivación de claves (BIP32 tree) navegable, con frontera watch-only
 - [ ] Vista de transacción: inputs → outputs con amounts
 - [ ] Timeline de UTXOs por dirección
 
