@@ -29,11 +29,10 @@ import {
   masterKeyFromSeed,
   derivePath,
   getDerivationPath,
-  getAddress,
   generateMnemonic,
 } from '../crypto/hdwallet';
+import { scanWallet } from '../api/walletScan';
 import {
-  getAddressUtxos,
   formatSats,
   broadcastTx,
   type Network,
@@ -91,12 +90,43 @@ function estimateVBytes(numInputs: number, numOutputs: number): number {
 }
 
 /**
+ * ¿Es la fee sospechosamente alta?
+ *
+ * La fee no es un campo de la transacción: es Σ inputs − Σ outputs, lo que
+ * "sobra". Por eso un error al teclear (2000 sat/vB en vez de 20) no lo detecta
+ * nadie — la tx es perfectamente válida y el minero se queda la diferencia.
+ * Las wallets serias (Sparrow, Bitcoin Core) avisan en estos dos casos:
+ *   - fee rate absurdo para el mercado (aquí, > 500 sat/vB)
+ *   - fee desproporcionada respecto a lo que envías (aquí, > 10 %)
+ */
+const HIGH_FEE_RATE = 500;     // sat/vB
+const HIGH_FEE_RATIO = 0.1;    // fracción del importe enviado
+
+function feeWarning(fee: number, vsize: number, amount: number): string | null {
+  if (vsize <= 0 || amount <= 0) return null;
+  const rate = fee / vsize;
+  if (rate > HIGH_FEE_RATE) {
+    return `Fee rate de ${rate.toFixed(1)} sat/vB: muy por encima de lo habitual (> ${HIGH_FEE_RATE}). ¿Error al teclear?`;
+  }
+  if (fee > amount * HIGH_FEE_RATIO) {
+    return `La fee (${formatSats(fee)}) es el ${((fee / amount) * 100).toFixed(1)} % de lo que envías.`;
+  }
+  return null;
+}
+
+/**
  * Crea el scriptPubKey para una dirección Bitcoin.
  * Decodifica la dirección bech32/bech32m y genera el script correspondiente.
+ *
+ * El HRP ("bc" / "tb") NO va dentro del scriptPubKey: solo indica la red.
+ * Por eso hay que comprobarlo aquí — si no, una dirección tb1… pegada en
+ * mainnet produciría un script válido y los fondos irían al mismo witness
+ * program en la red equivocada.
  */
-function addressToScriptPubKey(address: string): Uint8Array | null {
+function addressToScriptPubKey(address: string, network: Network): Uint8Array | null {
   const decoded = bech32Decode(address);
   if (!decoded) return null;
+  if (decoded.hrp !== (network === 'mainnet' ? 'bc' : 'tb')) return null;
 
   if (decoded.version === 0 && decoded.program.length === 20) {
     // P2WPKH: OP_0 <20 bytes>
@@ -138,7 +168,7 @@ export function TxBuilder() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amountInput, setAmountInput] = useState('');
   const [feeRate, setFeeRate] = useState(2); // sat/vB
-  const [changeIndex] = useState(0); // dirección de cambio
+  const [changeIndex, setChangeIndex] = useState(0); // primera dirección de cambio sin usar
 
   // Resultado: transacción construida (sin firmar)
   const [builtTx, setBuiltTx] = useState<{
@@ -148,6 +178,10 @@ export function TxBuilder() {
     size: number;
     fee: number;
     changeAmount: number;
+    // UTXOs con los que se construyó: la firma usa ESTOS (path + amount de cada
+    // input), no la selección actual de la UI, que puede haber cambiado después.
+    utxos: WalletUTXO[];
+    recipient: string;
   } | null>(null);
 
   // Resultado: transacción firmada
@@ -191,23 +225,17 @@ export function TxBuilder() {
       const seed = mnemonicToSeed(words, passphrase);
       const master = masterKeyFromSeed(seed);
 
-      // Derivar 5 direcciones de recepción + 1 de cambio.
+      // Escanear recepción (…/0/i) Y cambio (…/1/i) con gap limit: el cambio
+      // de envíos anteriores también son fondos gastables.
       // coin_type según la red: 0' mainnet, 1' testnet/signet (SLIP-0044).
-      // Debe coincidir con dónde están los fondos, o no encontraremos el UTXO.
-      const coinType = network === 'mainnet' ? 0 : 1;
-      const allUtxos: WalletUTXO[] = [];
+      const { receive, change } = await scanWallet(master, network);
+      const allUtxos: WalletUTXO[] = [...receive.addresses, ...change.addresses].flatMap(a =>
+        a.utxos.map(u => ({ ...u, address: a.address, path: a.path })),
+      );
 
-      for (let i = 0; i < 5; i++) {
-        const path = getDerivationPath(84, 0, false, i, coinType);
-        const { node } = derivePath(master, path);
-        const address = getAddress(node, 84, network === 'mainnet');
-
-        const utxos = await getAddressUtxos(address, network);
-        for (const u of utxos) {
-          allUtxos.push({ ...u, address, path });
-        }
-      }
-
+      // El cambio de esta tx irá a la primera dirección de cambio sin usar:
+      // reutilizar direcciones permite enlazar tus transacciones (privacidad).
+      setChangeIndex(change.firstUnused);
       setWalletUtxos(allUtxos);
       if (allUtxos.length === 0) {
         setUtxoError('No se encontraron UTXOs. La wallet no tiene fondos en ' + network);
@@ -286,6 +314,12 @@ export function TxBuilder() {
     }
 
     setSelectedUtxos(newSelected);
+    // Nueva selección → la tx construida/firmada ya no corresponde
+    setBuiltTx(null);
+    setSignedTx(null);
+    setBroadcastTxid(null);
+    setBroadcastError(null);
+    setSignError(null);
   }, [walletUtxos, amountSats, feeRate]);
 
   // ─── Construir transacción ──────────────────────────────
@@ -298,9 +332,10 @@ export function TxBuilder() {
     setBroadcastError(null);
 
     // Validar dirección del destinatario
-    const recipientScript = addressToScriptPubKey(recipientAddress.trim());
+    const recipientScript = addressToScriptPubKey(recipientAddress.trim(), network);
     if (!recipientScript) {
-      setUtxoError('Dirección de destinatario inválida (solo soportamos bech32/bech32m)');
+      const prefix = network === 'mainnet' ? 'bc1' : 'tb1';
+      setUtxoError(`Dirección de destinatario inválida: debe ser bech32/bech32m de ${network} (empieza por ${prefix})`);
       return;
     }
 
@@ -364,6 +399,8 @@ export function TxBuilder() {
       size: estimatedSize,
       fee: estimatedFee,
       changeAmount: changeAmount > 546 ? changeAmount : 0,
+      utxos: selected,
+      recipient: recipientAddress.trim(),
     });
   }, [selected, recipientAddress, amountSats, changeAmount, estimatedSize, estimatedFee, mnemonicInput, passphrase, changeIndex, network]);
 
@@ -395,8 +432,8 @@ export function TxBuilder() {
 
       // Un input → una firma. El sighash precalcula hashPrevouts/Sequence/Outputs
       // UNA vez por input (trivialmente caché-able para N inputs, BIP143 así lo premia).
-      for (let i = 0; i < selected.length; i++) {
-        const utxo = selected[i];
+      for (let i = 0; i < builtTx.utxos.length; i++) {
+        const utxo = builtTx.utxos[i];
         const { node } = derivePath(master, utxo.path);
         const privateKey = node.privateKey;
         const compressedPubKeyHex = compressPublicKey(node.publicKey);
@@ -440,18 +477,39 @@ export function TxBuilder() {
     } finally {
       setSigning(false);
     }
-  }, [builtTx, selected, mnemonicInput, passphrase]);
+  }, [builtTx, mnemonicInput, passphrase]);
+
+  // Fee REAL de la tx firmada: Σ inputs − Σ outputs, sobre el vsize real
+  const signedFee = useMemo(() => {
+    if (!builtTx || !signedTx) return null;
+    const totalIn = builtTx.utxos.reduce((sum, u) => sum + u.value, 0);
+    const totalOut = builtTx.tx.outputs.reduce((sum, o) => sum + Number(o.value), 0);
+    const fee = totalIn - totalOut;
+    const amount = Number(builtTx.tx.outputs[0].value);
+    return {
+      fee,
+      amount,
+      rate: fee / signedTx.vsize,
+      warning: feeWarning(fee, signedTx.vsize, amount),
+    };
+  }, [builtTx, signedTx]);
 
   // ─── Broadcast (POST a mempool.space) ──────────────────
 
   const broadcastSignedTransaction = useCallback(async () => {
-    if (!signedTx) return;
+    if (!signedTx || !builtTx || !signedFee) return;
 
-    // Aviso extra si es mainnet — aquí sí es dinero real
+    // Aviso extra si es mainnet — aquí sí es dinero real. Mostramos lo que se
+    // va a firmar de verdad (no lo que hay ahora en los inputs del formulario).
     if (network === 'mainnet') {
       const ok = window.confirm(
         'Estás a punto de emitir una transacción en MAINNET — los BTC son reales.\n\n' +
-        '¿Seguro que quieres continuar?'
+        `Destino: ${builtTx.recipient}\n` +
+        `Importe: ${formatSats(signedFee.amount)}\n` +
+        `Fee:     ${formatSats(signedFee.fee)} (${signedFee.rate.toFixed(1)} sat/vB)\n` +
+        `Cambio:  ${formatSats(builtTx.changeAmount)}\n` +
+        (signedFee.warning ? `\n⚠️ ${signedFee.warning}\n` : '') +
+        '\n¿Seguro que quieres continuar?'
       );
       if (!ok) return;
     }
@@ -469,7 +527,7 @@ export function TxBuilder() {
     } finally {
       setBroadcasting(false);
     }
-  }, [signedTx, network]);
+  }, [signedTx, builtTx, signedFee, network]);
 
   // ─── Generar mnemónico de prueba ───────────────────────
 
@@ -517,6 +575,10 @@ export function TxBuilder() {
 
         <textarea
           className="mnemonic-input"
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
           rows={2}
           value={mnemonicInput}
           onChange={e => setMnemonicInput(e.target.value.toLowerCase())}
@@ -528,6 +590,10 @@ export function TxBuilder() {
             <span className="passphrase-label">Passphrase:</span>
             <input
               className="passphrase-input"
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
               type="text"
               value={passphrase}
               onChange={e => setPassphrase(e.target.value)}
@@ -667,7 +733,7 @@ export function TxBuilder() {
                 <span>-{formatSats(estimatedFee)}</span>
               </div>
               <div className={`summary-row summary-change ${changeAmount < 0 ? 'negative' : ''}`}>
-                <span>Cambio:</span>
+                <span>Cambio (…/1/{changeIndex}, primera sin usar):</span>
                 <span>
                   {changeAmount < 0
                     ? `Faltan ${formatSats(Math.abs(changeAmount))}`
@@ -677,6 +743,9 @@ export function TxBuilder() {
                 </span>
               </div>
             </div>
+          )}
+          {selected.length > 0 && amountSats > 0 && feeWarning(estimatedFee, estimatedSize, amountSats) && (
+            <div className="txb-warning">⚠️ {feeWarning(estimatedFee, estimatedSize, amountSats)}</div>
           )}
 
           <button
@@ -904,6 +973,16 @@ export function TxBuilder() {
               </>
             )}
           </p>
+
+          {signedFee && (
+            <div className="tx-summary">
+              <div className="summary-row">
+                <span>Fee real (Σ inputs − Σ outputs):</span>
+                <span>{formatSats(signedFee.fee)} · {signedFee.rate.toFixed(1)} sat/vB × {signedTx.vsize} vB</span>
+              </div>
+            </div>
+          )}
+          {signedFee?.warning && <div className="txb-warning">⚠️ {signedFee.warning}</div>}
 
           <button
             className={`txb-btn primary build-btn ${network === 'mainnet' ? 'mainnet-btn' : ''}`}

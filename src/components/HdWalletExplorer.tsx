@@ -131,6 +131,10 @@ export function HdWalletExplorer() {
 
         <textarea
           className="mnemonic-input"
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
           rows={2}
           value={mnemonicInput}
           onChange={e => {
@@ -207,6 +211,10 @@ export function HdWalletExplorer() {
           <span className="passphrase-label">Passphrase (opcional):</span>
           <input
             className="passphrase-input"
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
             type="text"
             value={passphrase}
             onChange={e => setPassphrase(e.target.value)}

@@ -277,6 +277,10 @@ export function WalletSetup() {
             <span className="passphrase-label">Passphrase (opcional):</span>
             <input
               className="passphrase-input"
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
               type="text"
               value={passphrase}
               onChange={e => setPassphrase(e.target.value)}
@@ -327,6 +331,10 @@ export function WalletSetup() {
 
           <textarea
             className="mnemonic-input"
+            spellCheck={false}
+            autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
             rows={3}
             value={importInput}
             onChange={e => {
@@ -359,6 +367,10 @@ export function WalletSetup() {
             <span className="passphrase-label">Passphrase (opcional):</span>
             <input
               className="passphrase-input"
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
               type="text"
               value={passphrase}
               onChange={e => setPassphrase(e.target.value)}
