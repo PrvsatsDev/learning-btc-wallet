@@ -90,6 +90,31 @@ function estimateVBytes(numInputs: number, numOutputs: number): number {
 }
 
 /**
+ * ¿Es la fee sospechosamente alta?
+ *
+ * La fee no es un campo de la transacción: es Σ inputs − Σ outputs, lo que
+ * "sobra". Por eso un error al teclear (2000 sat/vB en vez de 20) no lo detecta
+ * nadie — la tx es perfectamente válida y el minero se queda la diferencia.
+ * Las wallets serias (Sparrow, Bitcoin Core) avisan en estos dos casos:
+ *   - fee rate absurdo para el mercado (aquí, > 500 sat/vB)
+ *   - fee desproporcionada respecto a lo que envías (aquí, > 10 %)
+ */
+const HIGH_FEE_RATE = 500;     // sat/vB
+const HIGH_FEE_RATIO = 0.1;    // fracción del importe enviado
+
+function feeWarning(fee: number, vsize: number, amount: number): string | null {
+  if (vsize <= 0 || amount <= 0) return null;
+  const rate = fee / vsize;
+  if (rate > HIGH_FEE_RATE) {
+    return `Fee rate de ${rate.toFixed(1)} sat/vB: muy por encima de lo habitual (> ${HIGH_FEE_RATE}). ¿Error al teclear?`;
+  }
+  if (fee > amount * HIGH_FEE_RATIO) {
+    return `La fee (${formatSats(fee)}) es el ${((fee / amount) * 100).toFixed(1)} % de lo que envías.`;
+  }
+  return null;
+}
+
+/**
  * Crea el scriptPubKey para una dirección Bitcoin.
  * Decodifica la dirección bech32/bech32m y genera el script correspondiente.
  *
@@ -153,6 +178,10 @@ export function TxBuilder() {
     size: number;
     fee: number;
     changeAmount: number;
+    // UTXOs con los que se construyó: la firma usa ESTOS (path + amount de cada
+    // input), no la selección actual de la UI, que puede haber cambiado después.
+    utxos: WalletUTXO[];
+    recipient: string;
   } | null>(null);
 
   // Resultado: transacción firmada
@@ -285,6 +314,12 @@ export function TxBuilder() {
     }
 
     setSelectedUtxos(newSelected);
+    // Nueva selección → la tx construida/firmada ya no corresponde
+    setBuiltTx(null);
+    setSignedTx(null);
+    setBroadcastTxid(null);
+    setBroadcastError(null);
+    setSignError(null);
   }, [walletUtxos, amountSats, feeRate]);
 
   // ─── Construir transacción ──────────────────────────────
@@ -364,6 +399,8 @@ export function TxBuilder() {
       size: estimatedSize,
       fee: estimatedFee,
       changeAmount: changeAmount > 546 ? changeAmount : 0,
+      utxos: selected,
+      recipient: recipientAddress.trim(),
     });
   }, [selected, recipientAddress, amountSats, changeAmount, estimatedSize, estimatedFee, mnemonicInput, passphrase, changeIndex, network]);
 
@@ -395,8 +432,8 @@ export function TxBuilder() {
 
       // Un input → una firma. El sighash precalcula hashPrevouts/Sequence/Outputs
       // UNA vez por input (trivialmente caché-able para N inputs, BIP143 así lo premia).
-      for (let i = 0; i < selected.length; i++) {
-        const utxo = selected[i];
+      for (let i = 0; i < builtTx.utxos.length; i++) {
+        const utxo = builtTx.utxos[i];
         const { node } = derivePath(master, utxo.path);
         const privateKey = node.privateKey;
         const compressedPubKeyHex = compressPublicKey(node.publicKey);
@@ -440,18 +477,39 @@ export function TxBuilder() {
     } finally {
       setSigning(false);
     }
-  }, [builtTx, selected, mnemonicInput, passphrase]);
+  }, [builtTx, mnemonicInput, passphrase]);
+
+  // Fee REAL de la tx firmada: Σ inputs − Σ outputs, sobre el vsize real
+  const signedFee = useMemo(() => {
+    if (!builtTx || !signedTx) return null;
+    const totalIn = builtTx.utxos.reduce((sum, u) => sum + u.value, 0);
+    const totalOut = builtTx.tx.outputs.reduce((sum, o) => sum + Number(o.value), 0);
+    const fee = totalIn - totalOut;
+    const amount = Number(builtTx.tx.outputs[0].value);
+    return {
+      fee,
+      amount,
+      rate: fee / signedTx.vsize,
+      warning: feeWarning(fee, signedTx.vsize, amount),
+    };
+  }, [builtTx, signedTx]);
 
   // ─── Broadcast (POST a mempool.space) ──────────────────
 
   const broadcastSignedTransaction = useCallback(async () => {
-    if (!signedTx) return;
+    if (!signedTx || !builtTx || !signedFee) return;
 
-    // Aviso extra si es mainnet — aquí sí es dinero real
+    // Aviso extra si es mainnet — aquí sí es dinero real. Mostramos lo que se
+    // va a firmar de verdad (no lo que hay ahora en los inputs del formulario).
     if (network === 'mainnet') {
       const ok = window.confirm(
         'Estás a punto de emitir una transacción en MAINNET — los BTC son reales.\n\n' +
-        '¿Seguro que quieres continuar?'
+        `Destino: ${builtTx.recipient}\n` +
+        `Importe: ${formatSats(signedFee.amount)}\n` +
+        `Fee:     ${formatSats(signedFee.fee)} (${signedFee.rate.toFixed(1)} sat/vB)\n` +
+        `Cambio:  ${formatSats(builtTx.changeAmount)}\n` +
+        (signedFee.warning ? `\n⚠️ ${signedFee.warning}\n` : '') +
+        '\n¿Seguro que quieres continuar?'
       );
       if (!ok) return;
     }
@@ -469,7 +527,7 @@ export function TxBuilder() {
     } finally {
       setBroadcasting(false);
     }
-  }, [signedTx, network]);
+  }, [signedTx, builtTx, signedFee, network]);
 
   // ─── Generar mnemónico de prueba ───────────────────────
 
@@ -685,6 +743,9 @@ export function TxBuilder() {
                 </span>
               </div>
             </div>
+          )}
+          {selected.length > 0 && amountSats > 0 && feeWarning(estimatedFee, estimatedSize, amountSats) && (
+            <div className="txb-warning">⚠️ {feeWarning(estimatedFee, estimatedSize, amountSats)}</div>
           )}
 
           <button
@@ -912,6 +973,16 @@ export function TxBuilder() {
               </>
             )}
           </p>
+
+          {signedFee && (
+            <div className="tx-summary">
+              <div className="summary-row">
+                <span>Fee real (Σ inputs − Σ outputs):</span>
+                <span>{formatSats(signedFee.fee)} · {signedFee.rate.toFixed(1)} sat/vB × {signedTx.vsize} vB</span>
+              </div>
+            </div>
+          )}
+          {signedFee?.warning && <div className="txb-warning">⚠️ {signedFee.warning}</div>}
 
           <button
             className={`txb-btn primary build-btn ${network === 'mainnet' ? 'mainnet-btn' : ''}`}

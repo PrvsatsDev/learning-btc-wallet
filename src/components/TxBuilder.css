@@ -161,6 +161,16 @@
   margin-top: 0.5rem;
 }
 
+.txb-warning {
+  font-size: 0.78rem;
+  color: #fbbf24;
+  background: #f59e0b14;
+  border: 1px solid #f59e0b44;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  margin: 0.5rem 0;
+}
+
 /* UTXO selection */
 .utxo-select-list {
   display: flex;
