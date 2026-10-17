@@ -41,7 +41,7 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 - [x] Construir transacciones (selección de UTXOs, fees, cambio)
 - [x] Firmar con BIP143 sighash + ECDSA y broadcast a la red
 
-### Fase 4 — UI visual (Sparrow/Liana-style) 🚧 en curso
+### Fase 4 — UI visual (Sparrow/Liana-style) ✅
 - [x] Multisig P2WSH + PSBT (BIP174) con descriptores watch-only
 - [x] Taproot completo (key-path, script-path, sighash BIP341) + `tr(NUMS, sortedmulti_a)`
 - [x] MuSig2 (BIP327): firma Schnorr agregada n-de-n
@@ -49,7 +49,7 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 - [x] Taproot Multisig watch-only con xpubs del usuario + saldo real vía mempool.space
 - [x] Visualizador del árbol de derivación de claves (BIP32 tree) navegable, con frontera watch-only
 - [x] Vista de transacción: inputs → outputs con amounts (importes verificados contra la tx previa)
-- [ ] Timeline de UTXOs por dirección
+- [x] Timeline de UTXOs por dirección (reconstruida del historial y comprobada contra /utxo del servidor)
 
 ---
 
@@ -65,12 +65,12 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 
 ## Primer paso al volver
 
-Fase 4 muy avanzada: ya hay exploradores de multisig P2WSH, PSBT, Taproot
-(key/script-path), Taproot Multisig watch-only (xpubs propias + saldo real vía
-mempool.space), MuSig2 y timelocks estilo Liana — toda la cripto desde cero y
-verificada contra vectores. Lo que **queda de Fase 4** es la parte más "visual
-Sparrow/Liana": árbol de derivación BIP32 navegable, vista inputs→outputs de una
-tx, y timeline de UTXOs por dirección.
+Fase 4 completa: exploradores de multisig P2WSH, PSBT, Taproot (key/script-path),
+Taproot Multisig watch-only, MuSig2, timelocks estilo Liana, árbol BIP32
+navegable, vista inputs→outputs de una tx (importes verificados contra la tx
+previa) y timeline de UTXOs por dirección — toda la cripto desde cero y
+verificada contra vectores o contra datos reales de mainnet. Siguiente: decidir
+la Fase 5 (p. ej. las ideas de "Claude Code — Cosas a explorar juntos").
 
 ---
 

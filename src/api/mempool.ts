@@ -153,10 +153,19 @@ export async function getAddressUtxos(address: string, network: Network = 'testn
 
 /**
  * Obtiene el historial de transacciones de una dirección.
- * Devuelve las últimas 25 confirmadas + hasta 50 pendientes.
+ * Devuelve las pendientes + la primera página de confirmadas (25 o 50 según el
+ * servidor); las siguientes, con getAddressTxsChain.
  */
 export async function getAddressTxs(address: string, network: Network = 'testnet4'): Promise<Transaction[]> {
   return apiFetch<Transaction[]>(network, `/address/${address}/txs`);
+}
+
+/**
+ * Página siguiente del historial confirmado: las tx confirmadas anteriores
+ * a `lastSeenTxid` (la última de la página previa). Así se recorre hacia atrás.
+ */
+export async function getAddressTxsChain(address: string, lastSeenTxid: string, network: Network = 'testnet4'): Promise<Transaction[]> {
+  return apiFetch<Transaction[]>(network, `/address/${address}/txs/chain/${lastSeenTxid}`);
 }
 
 /**
