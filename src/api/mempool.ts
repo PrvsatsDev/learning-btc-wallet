@@ -104,8 +104,7 @@ const BASE_URLS: Record<Network, string> = {
  * La API de mempool.space tiene rate limiting (sin API key),
  * así que si obtenemos un 429 esperamos y reintentamos una vez.
  */
-async function apiFetch<T>(network: Network, path: string): Promise<T> {
-  const url = `${BASE_URLS[network]}${path}`;
+async function fetchWithRetry(url: string): Promise<Response> {
   const response = await fetch(url);
 
   if (response.status === 429) {
@@ -113,13 +112,18 @@ async function apiFetch<T>(network: Network, path: string): Promise<T> {
     await new Promise(r => setTimeout(r, 2000));
     const retry = await fetch(url);
     if (!retry.ok) throw new Error(`API error ${retry.status}: ${retry.statusText}`);
-    return retry.json();
+    return retry;
   }
 
   if (!response.ok) {
     throw new Error(`API error ${response.status}: ${response.statusText}`);
   }
 
+  return response;
+}
+
+async function apiFetch<T>(network: Network, path: string): Promise<T> {
+  const response = await fetchWithRetry(`${BASE_URLS[network]}${path}`);
   return response.json();
 }
 
@@ -160,6 +164,17 @@ export async function getAddressTxs(address: string, network: Network = 'testnet
  */
 export async function getTransaction(txid: string, network: Network = 'testnet4'): Promise<Transaction> {
   return apiFetch<Transaction>(network, `/tx/${txid}`);
+}
+
+/**
+ * Obtiene los bytes CRUDOS (hex) de una transacción.
+ *
+ * A diferencia de getTransaction (JSON ya interpretado por el servidor), con el
+ * hex podemos recalcularlo todo nosotros y comprobar que el txid cuadra.
+ */
+export async function getTransactionHex(txid: string, network: Network = 'testnet4'): Promise<string> {
+  const response = await fetchWithRetry(`${BASE_URLS[network]}/tx/${txid}/hex`);
+  return (await response.text()).trim();
 }
 
 /**

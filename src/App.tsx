@@ -20,6 +20,7 @@ import { TaprootMultisigExplorer } from './components/TaprootMultisigExplorer';
 import { MuSig2Explorer } from './components/MuSig2Explorer';
 import { TimelockExplorer } from './components/TimelockExplorer';
 import { Bip32TreeExplorer } from './components/Bip32TreeExplorer';
+import { TxFlowExplorer } from './components/TxFlowExplorer';
 import { BipReference } from './components/BipReference';
 import { DisclaimerBanner } from './components/DisclaimerBanner';
 import './App.css';
@@ -28,7 +29,7 @@ type LessonId =
   | 'sha256' | 'ripemd160' | 'secp256k1' | 'address'
   | 'ecdsa' | 'schnorr' | 'utxo' | 'transaction' | 'scripts' | 'hdwallet'
   | 'wallet-setup' | 'balance' | 'tx-builder' | 'entropy-audit'
-  | 'multisig-guide' | 'multisig-explorer' | 'psbt-explorer' | 'taproot-multisig' | 'musig2' | 'timelock' | 'bip32-tree'
+  | 'multisig-guide' | 'multisig-explorer' | 'psbt-explorer' | 'taproot-multisig' | 'musig2' | 'timelock' | 'bip32-tree' | 'tx-flow'
   | 'bip-reference';
 
 interface Phase {
@@ -81,6 +82,7 @@ const phases: Phase[] = [
       { id: 'musig2', label: 'MuSig2', component: MuSig2Explorer },
       { id: 'timelock', label: 'Timelocks (Liana)', component: TimelockExplorer },
       { id: 'bip32-tree', label: 'Árbol BIP32', component: Bip32TreeExplorer },
+      { id: 'tx-flow', label: 'Vista de transacción', component: TxFlowExplorer },
     ],
   },
   {

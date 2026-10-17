@@ -1,0 +1,166 @@
+/* TxFlowExplorer — Fase 4, vista de transacción inputs → outputs */
+
+.tf {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 3rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #e2e8f0;
+}
+
+.tf-header { margin-bottom: 1rem; }
+
+.tf-phase-tag {
+  display: inline-block;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #f7931a; background: #f7931a1a; border: 1px solid #f7931a33;
+  border-radius: 999px; padding: 0.25rem 0.7rem; margin-bottom: 0.75rem;
+}
+
+.tf-header h1 { font-size: 2rem; font-weight: 700; color: #f7931a; margin: 0 0 0.5rem; }
+.tf-subtitle { color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin: 0; max-width: 820px; }
+
+.tf code {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 0.82em;
+  background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 0.05em 0.35em; color: #e2e8f0;
+}
+.tf code.wrap { display: block; word-break: break-all; padding: 0.35rem 0.5rem; line-height: 1.5; }
+.tf strong { color: #f1f5f9; }
+.tf .ok { color: #4ade80; }
+.tf .bad { color: #fca5a5; }
+.tf .warn { color: #fbbf24; }
+.tf-k { color: #64748b; font-size: 0.8em; }
+.tf-note { font-size: 0.82rem; line-height: 1.6; color: #94a3b8; margin: 0.25rem 0 0.75rem; }
+
+/* ─── Fuente ─── */
+.tf-source {
+  background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 1rem 1.25rem;
+  display: flex; flex-direction: column; gap: 0.85rem; margin-bottom: 1rem;
+}
+.tf-examples { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.tf-source-label { font-size: 0.8rem; color: #94a3b8; margin-right: 0.25rem; }
+.tf-chip {
+  font-size: 0.76rem; padding: 0.3rem 0.65rem; border-radius: 999px; cursor: pointer;
+  background: #1e293b; color: #cbd5e1; border: 1px solid #334155; transition: all 0.15s;
+}
+.tf-chip:hover { border-color: #f7931a88; color: #f7931a; }
+.tf-chip.active { background: #f7931a22; color: #f7931a; border-color: #f7931a88; font-weight: 600; }
+
+.tf-load { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 0.6rem; align-items: center; }
+.tf-load input {
+  font-family: ui-monospace, monospace; font-size: 0.8rem; color: #e2e8f0; min-width: 0;
+  background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.5rem 0.65rem;
+}
+.tf-load input:focus { outline: none; border-color: #f7931a88; }
+
+.tf-toggle { display: flex; gap: 0.2rem; background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 0.2rem; }
+.tf-toggle button {
+  padding: 0.3rem 0.55rem; font-size: 0.74rem; font-family: ui-monospace, monospace;
+  background: transparent; color: #94a3b8; border: none; border-radius: 6px; cursor: pointer;
+}
+.tf-toggle button.active { background: #f7931a22; color: #f7931a; font-weight: 600; }
+
+.tf-btn {
+  padding: 0.5rem 1rem; font-size: 0.82rem; background: #f7931a; color: #0f172a; font-weight: 600;
+  border: none; border-radius: 8px; cursor: pointer;
+}
+.tf-btn:disabled { opacity: 0.45; cursor: default; }
+
+.tf-status { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: #94a3b8; margin-bottom: 0.75rem; }
+.tf-source .tf-status { margin-bottom: 0; }
+.tf-status--warn { color: #fbbf24; }
+.tf-status--error { color: #fca5a5; }
+.tf-spinner {
+  width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+  border: 2px solid #334155; border-top-color: #f7931a; animation: tf-spin 0.8s linear infinite;
+}
+@keyframes tf-spin { to { transform: rotate(360deg); } }
+
+/* ─── IDs y resumen ─── */
+.tf-ids { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; margin-bottom: 0.9rem; }
+.tf-ids code { word-break: break-all; }
+.tf-ids a { color: #f7931a; font-size: 0.78rem; text-decoration: none; }
+.tf-ids a:hover { text-decoration: underline; }
+
+.tf-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; margin-bottom: 0.75rem; }
+.tf-card {
+  background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 0.75rem 0.9rem;
+  display: flex; flex-direction: column; gap: 0.2rem; min-width: 0;
+}
+.tf-card--fee { border-color: #fca5a555; }
+.tf-card-label { font-size: 0.74rem; color: #94a3b8; }
+.tf-card-value { font-family: ui-monospace, monospace; font-size: 1.05rem; font-weight: 600; color: #f1f5f9; overflow-wrap: anywhere; }
+.tf-card-value small { font-size: 0.7rem; color: #94a3b8; font-weight: 400; }
+.tf-card--fee .tf-card-value { color: #fca5a5; }
+.tf-card-sub { font-size: 0.74rem; color: #64748b; font-family: ui-monospace, monospace; }
+
+.tf-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1rem; }
+.tf-badge {
+  font-size: 0.74rem; padding: 0.2rem 0.6rem; border-radius: 999px;
+  background: #1e293b; color: #94a3b8; border: 1px solid #334155;
+}
+.tf-badge.on { color: #22d3ee; border-color: #22d3ee44; background: #22d3ee14; }
+.tf-badge.warn { color: #fbbf24; border-color: #fbbf2444; background: #fbbf2414; }
+
+/* ─── Diagrama ─── */
+.tf-diagram-wrap {
+  background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 1rem;
+  overflow-x: auto; margin-bottom: 1rem;
+}
+.tf-svg { display: block; width: 100%; min-width: 640px; height: auto; }
+.tf-ribbon { cursor: pointer; transition: opacity 0.15s; }
+.tf-ribbon:hover { opacity: 0.8; }
+.tf-box { cursor: pointer; }
+.tf-box-rect { fill: #111c33; stroke-width: 1; transition: fill 0.15s; }
+.tf-box:hover .tf-box-rect { fill: #1e293b; }
+.tf-box-rect.active { fill: #f7931a14; stroke-width: 2; }
+.tf-box-title { fill: #e2e8f0; font-size: 13px; font-weight: 600; font-family: system-ui, sans-serif; }
+.tf-box-hint { fill: #fbbf24; font-size: 11px; font-family: system-ui, sans-serif; }
+.tf-box-amount { fill: #f1f5f9; font-size: 13px; font-family: ui-monospace, monospace; }
+.tf-box-sub { fill: #64748b; font-size: 11px; font-family: ui-monospace, monospace; }
+.tf-trunk { fill: #f7931a; opacity: 0.9; }
+.tf-trunk-label { fill: #f7931a; font-size: 12px; font-weight: 700; font-family: system-ui, sans-serif; }
+
+/* ─── Peso ─── */
+.tf-weight { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.tf-weight-head { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; font-size: 0.82rem; color: #94a3b8; margin-bottom: 0.6rem; }
+.tf-weight-bar { display: flex; height: 30px; border-radius: 6px; overflow: hidden; font-size: 0.72rem; font-family: ui-monospace, monospace; }
+.tf-weight-base, .tf-weight-wit {
+  display: flex; align-items: center; padding: 0 0.6rem; white-space: nowrap; overflow: hidden; min-width: 0; flex-basis: 0;
+}
+.tf-weight-base { background: #a78bfa33; color: #c4b5fd; }
+.tf-weight-wit { background: #22d3ee33; color: #67e8f9; }
+.tf-weight .tf-note { margin: 0.6rem 0 0; }
+
+/* ─── Detalle ─── */
+.tf-detail { background: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 1rem 1.25rem; }
+.tf-detail h3 { margin: 0 0 0.3rem; font-size: 1.1rem; color: #f1f5f9; }
+.tf-fields { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 0.5rem 0.9rem; margin: 0; font-size: 0.82rem; }
+.tf-fields dt { color: #94a3b8; padding-top: 0.15rem; }
+.tf-fields dd { margin: 0; min-width: 0; line-height: 1.55; }
+.tf-witness { margin: 0; padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.tf-witness code { word-break: break-all; }
+
+.tf-hints {
+  margin-top: 0.9rem; padding: 0.75rem 0.9rem; border-radius: 8px; font-size: 0.82rem;
+  background: #2e2205; border: 1px solid #fbbf2433; border-left: 4px solid #fbbf24;
+}
+.tf-hints ul { margin: 0.4rem 0; padding-left: 1.2rem; color: #fde68a; }
+
+.tf-formula {
+  font-family: ui-monospace, monospace; font-size: 0.85rem; line-height: 1.9;
+  background: #020617; border: 1px solid #1e293b; border-radius: 8px; padding: 0.75rem 1rem; margin: 0.5rem 0;
+}
+.tf-formula-total { color: #fca5a5; font-weight: 700; border-top: 1px solid #334155; margin-bottom: 0.3rem; }
+
+/* ─── Responsive ─── */
+@media (max-width: 900px) {
+  .tf-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) {
+  .tf { padding: 1.25rem 1rem 2rem; }
+  .tf-header h1 { font-size: 1.5rem; }
+  .tf-load { grid-template-columns: 1fr; }
+  .tf-fields { grid-template-columns: 1fr; }
+  .tf-fields dt { padding-top: 0.4rem; }
+}
