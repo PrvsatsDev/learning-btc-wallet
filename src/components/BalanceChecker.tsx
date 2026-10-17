@@ -27,9 +27,6 @@ import {
   validateMnemonic,
   mnemonicToSeed,
   masterKeyFromSeed,
-  derivePath,
-  getDerivationPath,
-  getAddress,
 } from '../crypto/hdwallet';
 import {
   getAddressInfo,
@@ -41,6 +38,7 @@ import {
   type AddressInfo,
   type UTXO,
 } from '../api/mempool';
+import { scanWallet } from '../api/walletScan';
 import './BalanceChecker.css';
 
 // ─── Tipos internos ─────────────────────────────────────
@@ -124,64 +122,21 @@ export function BalanceChecker() {
       const seed = mnemonicToSeed(words, passphrase);
       const master = masterKeyFromSeed(seed);
 
-      // Derivar 5 direcciones de recepción BIP84.
+      // Escanear recepción (…/0/i) y cambio (…/1/i) BIP84 con gap limit:
+      // el saldo de una wallet incluye el cambio de los envíos que ya hizo.
       // coin_type según la red: 0' mainnet, 1' testnet/signet (SLIP-0044).
-      const coinType = network === 'mainnet' ? 0 : 1;
-      const addresses: AddressData[] = [];
-      for (let i = 0; i < 5; i++) {
-        const path = getDerivationPath(84, 0, false, i, coinType);
-        const { node } = derivePath(master, path);
-        addresses.push({
-          path,
-          address: getAddress(node, 84, network === 'mainnet'),
-          info: null,
-          utxos: [],
-          loading: true,
-          error: null,
-        });
-      }
+      const { receive, change } = await scanWallet(master, network);
 
-      // Mostrar las direcciones mientras cargan
-      setWalletState({ words, addresses, totalConfirmed: 0, totalPending: 0 });
-
-      // Consultar cada dirección en paralelo
-      const results = await Promise.allSettled(
-        addresses.map(async (addr) => {
-          const [info, utxos] = await Promise.all([
-            getAddressInfo(addr.address, network),
-            getAddressUtxos(addr.address, network),
-          ]);
-          return { address: addr.address, info, utxos };
-        })
-      );
-
-      // Actualizar estado con los resultados
       let totalConfirmed = 0;
       let totalPending = 0;
-
-      const updatedAddresses = addresses.map((addr, i) => {
-        const result = results[i];
-        if (result.status === 'fulfilled') {
-          const { info, utxos } = result.value;
-          const balance = calculateBalance(info);
-          totalConfirmed += balance.confirmed;
-          totalPending += balance.pending;
-          return { ...addr, info, utxos, loading: false };
-        } else {
-          return {
-            ...addr,
-            loading: false,
-            error: result.reason?.message ?? 'Error',
-          };
-        }
+      const addresses: AddressData[] = [...receive.addresses, ...change.addresses].map(a => {
+        const balance = calculateBalance(a.info);
+        totalConfirmed += balance.confirmed;
+        totalPending += balance.pending;
+        return { path: a.path, address: a.address, info: a.info, utxos: a.utxos, loading: false, error: null };
       });
 
-      setWalletState({
-        words,
-        addresses: updatedAddresses,
-        totalConfirmed,
-        totalPending,
-      });
+      setWalletState({ words, addresses, totalConfirmed, totalPending });
     } catch (e) {
       setWalletError(e instanceof Error ? e.message : 'Error al derivar wallet');
     } finally {
@@ -308,6 +263,10 @@ export function BalanceChecker() {
 
             <textarea
               className="mnemonic-input"
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
               rows={2}
               value={mnemonicInput}
               onChange={e => setMnemonicInput(e.target.value.toLowerCase())}
@@ -319,6 +278,10 @@ export function BalanceChecker() {
                 <span className="passphrase-label">Passphrase:</span>
                 <input
                   className="passphrase-input"
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  autoCapitalize="off"
                   type="text"
                   value={passphrase}
                   onChange={e => setPassphrase(e.target.value)}
@@ -376,7 +339,9 @@ export function BalanceChecker() {
               <div className="bc-section">
                 <span className="section-label">Direcciones derivadas</span>
                 <p className="section-description">
-                  Ruta BIP84: m/84'/0'/0'/0/i — SegWit nativo.
+                  Ruta BIP84: m/84'/coin'/0'/0/i (recepción) y m/84'/coin'/0'/1/i (cambio),
+                  con coin = 0 en mainnet y 1 en testnet/signet. Se escanea cada cadena
+                  hasta encontrar 5 direcciones seguidas sin usar (gap limit).
                   Haz clic en una dirección para ver sus UTXOs.
                 </p>
 

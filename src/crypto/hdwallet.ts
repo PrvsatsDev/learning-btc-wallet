@@ -133,8 +133,12 @@ export function validateMnemonic(words: string[]): boolean {
  * otra para un wallet señuelo.
  */
 export function mnemonicToSeed(words: string[], passphrase: string = ''): Uint8Array {
-  const mnemonic = new TextEncoder().encode(words.join(' '));
-  const salt = new TextEncoder().encode('mnemonic' + passphrase);
+  // BIP39 exige normalizar a NFKD antes de codificar a UTF-8. Una "ñ" puede
+  // llegar como un único carácter (U+00F1) o como "n" + tilde combinante
+  // (U+006E U+0303) según el teclado o el SO: se ven iguales, pero sin
+  // normalizar dan bytes distintos → seed distinta → otra wallet.
+  const mnemonic = new TextEncoder().encode(words.join(' ').normalize('NFKD'));
+  const salt = new TextEncoder().encode(('mnemonic' + passphrase).normalize('NFKD'));
   return pbkdf2HmacSha512(mnemonic, salt, 2048);
 }
 

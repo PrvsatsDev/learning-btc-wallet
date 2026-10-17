@@ -29,11 +29,10 @@ import {
   masterKeyFromSeed,
   derivePath,
   getDerivationPath,
-  getAddress,
   generateMnemonic,
 } from '../crypto/hdwallet';
+import { scanWallet } from '../api/walletScan';
 import {
-  getAddressUtxos,
   formatSats,
   broadcastTx,
   type Network,
@@ -93,10 +92,16 @@ function estimateVBytes(numInputs: number, numOutputs: number): number {
 /**
  * Crea el scriptPubKey para una dirección Bitcoin.
  * Decodifica la dirección bech32/bech32m y genera el script correspondiente.
+ *
+ * El HRP ("bc" / "tb") NO va dentro del scriptPubKey: solo indica la red.
+ * Por eso hay que comprobarlo aquí — si no, una dirección tb1… pegada en
+ * mainnet produciría un script válido y los fondos irían al mismo witness
+ * program en la red equivocada.
  */
-function addressToScriptPubKey(address: string): Uint8Array | null {
+function addressToScriptPubKey(address: string, network: Network): Uint8Array | null {
   const decoded = bech32Decode(address);
   if (!decoded) return null;
+  if (decoded.hrp !== (network === 'mainnet' ? 'bc' : 'tb')) return null;
 
   if (decoded.version === 0 && decoded.program.length === 20) {
     // P2WPKH: OP_0 <20 bytes>
@@ -138,7 +143,7 @@ export function TxBuilder() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amountInput, setAmountInput] = useState('');
   const [feeRate, setFeeRate] = useState(2); // sat/vB
-  const [changeIndex] = useState(0); // dirección de cambio
+  const [changeIndex, setChangeIndex] = useState(0); // primera dirección de cambio sin usar
 
   // Resultado: transacción construida (sin firmar)
   const [builtTx, setBuiltTx] = useState<{
@@ -191,23 +196,17 @@ export function TxBuilder() {
       const seed = mnemonicToSeed(words, passphrase);
       const master = masterKeyFromSeed(seed);
 
-      // Derivar 5 direcciones de recepción + 1 de cambio.
+      // Escanear recepción (…/0/i) Y cambio (…/1/i) con gap limit: el cambio
+      // de envíos anteriores también son fondos gastables.
       // coin_type según la red: 0' mainnet, 1' testnet/signet (SLIP-0044).
-      // Debe coincidir con dónde están los fondos, o no encontraremos el UTXO.
-      const coinType = network === 'mainnet' ? 0 : 1;
-      const allUtxos: WalletUTXO[] = [];
+      const { receive, change } = await scanWallet(master, network);
+      const allUtxos: WalletUTXO[] = [...receive.addresses, ...change.addresses].flatMap(a =>
+        a.utxos.map(u => ({ ...u, address: a.address, path: a.path })),
+      );
 
-      for (let i = 0; i < 5; i++) {
-        const path = getDerivationPath(84, 0, false, i, coinType);
-        const { node } = derivePath(master, path);
-        const address = getAddress(node, 84, network === 'mainnet');
-
-        const utxos = await getAddressUtxos(address, network);
-        for (const u of utxos) {
-          allUtxos.push({ ...u, address, path });
-        }
-      }
-
+      // El cambio de esta tx irá a la primera dirección de cambio sin usar:
+      // reutilizar direcciones permite enlazar tus transacciones (privacidad).
+      setChangeIndex(change.firstUnused);
       setWalletUtxos(allUtxos);
       if (allUtxos.length === 0) {
         setUtxoError('No se encontraron UTXOs. La wallet no tiene fondos en ' + network);
@@ -298,9 +297,10 @@ export function TxBuilder() {
     setBroadcastError(null);
 
     // Validar dirección del destinatario
-    const recipientScript = addressToScriptPubKey(recipientAddress.trim());
+    const recipientScript = addressToScriptPubKey(recipientAddress.trim(), network);
     if (!recipientScript) {
-      setUtxoError('Dirección de destinatario inválida (solo soportamos bech32/bech32m)');
+      const prefix = network === 'mainnet' ? 'bc1' : 'tb1';
+      setUtxoError(`Dirección de destinatario inválida: debe ser bech32/bech32m de ${network} (empieza por ${prefix})`);
       return;
     }
 
@@ -517,6 +517,10 @@ export function TxBuilder() {
 
         <textarea
           className="mnemonic-input"
+          spellCheck={false}
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
           rows={2}
           value={mnemonicInput}
           onChange={e => setMnemonicInput(e.target.value.toLowerCase())}
@@ -528,6 +532,10 @@ export function TxBuilder() {
             <span className="passphrase-label">Passphrase:</span>
             <input
               className="passphrase-input"
+              spellCheck={false}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
               type="text"
               value={passphrase}
               onChange={e => setPassphrase(e.target.value)}
@@ -667,7 +675,7 @@ export function TxBuilder() {
                 <span>-{formatSats(estimatedFee)}</span>
               </div>
               <div className={`summary-row summary-change ${changeAmount < 0 ? 'negative' : ''}`}>
-                <span>Cambio:</span>
+                <span>Cambio (…/1/{changeIndex}, primera sin usar):</span>
                 <span>
                   {changeAmount < 0
                     ? `Faltan ${formatSats(Math.abs(changeAmount))}`
