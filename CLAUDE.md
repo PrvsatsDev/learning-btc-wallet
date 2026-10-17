@@ -18,6 +18,16 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 3. Usamos Claude Code (agents, skills, slash commands, hooks) como parte del proceso
 4. Primero entendemos, luego implementamos
 
+## Límites deliberados (wallet didáctica, no de producción)
+
+- **Nunca gasta fondos reales**: firmar y emitir solo en testnet4/signet. Mainnet
+  es de solo lectura (saldos, vista de tx, timeline, watch-only).
+- **La seed nunca se guarda**: vive solo en memoria mientras la pestaña está
+  abierta. Cargar una seed real es posible (offline, bajo responsabilidad del
+  usuario) para *ver* derivaciones, pero no se persiste ni se cifra en disco.
+- Cualquier funcionalidad nueva que "gaste" (RBF, CPFP, bóveda Liana…) se
+  prueba en signet/testnet4.
+
 ---
 
 ## Hoja de ruta
@@ -51,6 +61,28 @@ El objetivo NO es solo construirla — es entender cada concepto mientras la con
 - [x] Vista de transacción: inputs → outputs con amounts (importes verificados contra la tx previa)
 - [x] Timeline de UTXOs por dirección (reconstruida del historial y comprobada contra /utxo del servidor)
 
+### Fase 5 — Miniscript, gestión de fees y Claude Code
+- [x] **0. Hacer cumplir los límites deliberados**: `TxBuilder` solo ofrece
+  testnet4/signet (coin_type 1', rechaza direcciones bc1…) y `broadcastTx` solo
+  acepta `BroadcastNetwork` + comprobación en runtime (test `broadcast.test.ts`).
+  La seed no se persiste en ningún sitio (no hay localStorage/sessionStorage).
+- [ ] **1. Miniscript + bóveda Liana de punta a punta**: políticas legibles →
+  Script, análisis de condiciones de gasto, y construir/firmar el gasto de la
+  rama de recuperación al vencer el timelock (en signet/testnet4).
+- [ ] **2. RBF / CPFP + coin control estilo Sparrow**: acelerar tx atascadas
+  (nSequence, reglas de reemplazo, mercado de fees) y elegir UTXOs a mano
+  viendo el impacto en privacidad (en signet/testnet4).
+- [ ] **3. Claude Code**: hook que lance los tests al tocar `src/crypto/`, y
+  slash command `/decode-tx` (después `/explain-script` y el agente explicador).
+- [ ] Limpieza: pendientes de la revisión de seguridad (7: CSP de Tauri, 8: menores).
+
+### Ideas para una Fase 6
+- Silent Payments (BIP352) — ECDH sobre secp256k1
+- Etiquetas BIP329 (import/export)
+- Análisis de privacidad (reutilización, heurísticas de cambio)
+- Intercambio de PSBT air-gapped (fichero / QR animado UR/BBQr)
+- Servidor MCP de mempool.space
+
 ---
 
 ## Claude Code — Cosas a explorar juntos
@@ -69,8 +101,11 @@ Fase 4 completa: exploradores de multisig P2WSH, PSBT, Taproot (key/script-path)
 Taproot Multisig watch-only, MuSig2, timelocks estilo Liana, árbol BIP32
 navegable, vista inputs→outputs de una tx (importes verificados contra la tx
 previa) y timeline de UTXOs por dirección — toda la cripto desde cero y
-verificada contra vectores o contra datos reales de mainnet. Siguiente: decidir
-la Fase 5 (p. ej. las ideas de "Claude Code — Cosas a explorar juntos").
+verificada contra vectores o contra datos reales de mainnet.
+
+Fase 5 en marcha (2026-10-17). Punto 0 hecho: ya no se puede firmar ni emitir
+en mainnet. Siguiente: Miniscript + bóveda Liana, RBF/CPFP + coin control, y
+los hooks/slash commands de Claude Code.
 
 ---
 

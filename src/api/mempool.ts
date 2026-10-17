@@ -187,13 +187,27 @@ export async function getTransactionHex(txid: string, network: Network = 'testne
 }
 
 /**
+ * Redes en las que la app puede EMITIR transacciones.
+ *
+ * Mainnet queda fuera a propósito: es una wallet didáctica y nunca debe mover
+ * BTC reales. Mainnet sigue disponible para LEER (saldos, vista de tx…).
+ */
+export type BroadcastNetwork = Exclude<Network, 'mainnet'>;
+export const BROADCAST_NETWORKS: readonly BroadcastNetwork[] = ['testnet4', 'signet'];
+
+/**
  * Emite una transacción a la red (broadcast).
  * Recibe el hex de la transacción serializada.
  * Devuelve el txid si se acepta.
  *
- * Esto se usará en el paso 4 (firma y broadcast).
+ * Solo acepta redes de prueba. El tipo ya impide pasar 'mainnet', pero los
+ * tipos desaparecen al compilar (un `as`, un `any`…), así que lo comprobamos
+ * también en tiempo de ejecución, antes de que salga ninguna petición.
  */
-export async function broadcastTx(txHex: string, network: Network = 'testnet4'): Promise<string> {
+export async function broadcastTx(txHex: string, network: BroadcastNetwork = 'testnet4'): Promise<string> {
+  if (!(BROADCAST_NETWORKS as readonly string[]).includes(network)) {
+    throw new Error(`Broadcast bloqueado: esta wallet didáctica solo emite en ${BROADCAST_NETWORKS.join(' / ')}, nunca en ${network}`);
+  }
   const url = `${BASE_URLS[network]}/tx`;
   const response = await fetch(url, {
     method: 'POST',

@@ -77,7 +77,6 @@
 
 .network-btn:hover { background: #334155; color: #e2e8f0; }
 .network-btn.active { background: #f7931a22; color: #f7931a; border-color: #f7931a44; font-weight: 600; }
-.network-btn.mainnet-btn.active { background: #dc262622; color: #f87171; border-color: #dc262644; }
 
 /* Inputs */
 .mnemonic-input {

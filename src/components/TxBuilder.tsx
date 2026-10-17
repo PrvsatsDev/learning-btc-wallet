@@ -35,7 +35,8 @@ import { scanWallet } from '../api/walletScan';
 import {
   formatSats,
   broadcastTx,
-  type Network,
+  BROADCAST_NETWORKS,
+  type BroadcastNetwork,
   type UTXO as ApiUTXO,
 } from '../api/mempool';
 import { createP2WPKH } from '../crypto/script';
@@ -119,14 +120,15 @@ function feeWarning(fee: number, vsize: number, amount: number): string | null {
  * Decodifica la dirección bech32/bech32m y genera el script correspondiente.
  *
  * El HRP ("bc" / "tb") NO va dentro del scriptPubKey: solo indica la red.
- * Por eso hay que comprobarlo aquí — si no, una dirección tb1… pegada en
- * mainnet produciría un script válido y los fondos irían al mismo witness
- * program en la red equivocada.
+ * Por eso hay que comprobarlo aquí — si no, una dirección bc1… de mainnet
+ * produciría un script válido y los fondos irían al mismo witness program en
+ * la red de pruebas. Este builder solo trabaja en testnet4/signet, así que
+ * solo vale "tb".
  */
-function addressToScriptPubKey(address: string, network: Network): Uint8Array | null {
+function addressToScriptPubKey(address: string): Uint8Array | null {
   const decoded = bech32Decode(address);
   if (!decoded) return null;
-  if (decoded.hrp !== (network === 'mainnet' ? 'bc' : 'tb')) return null;
+  if (decoded.hrp !== 'tb') return null;
 
   if (decoded.version === 0 && decoded.program.length === 20) {
     // P2WPKH: OP_0 <20 bytes>
@@ -154,7 +156,9 @@ function pubKeyHashFromCompressedKey(pubKeyHex: string): Uint8Array {
 // ─── Componente principal ───────────────────────────────
 
 export function TxBuilder() {
-  const [network, setNetwork] = useState<Network>('testnet4');
+  // Solo redes de prueba: esta herramienta firma y emite, y nunca debe hacerlo
+  // con BTC reales.
+  const [network, setNetwork] = useState<BroadcastNetwork>('testnet4');
   const [mnemonicInput, setMnemonicInput] = useState('');
   const [passphrase, setPassphrase] = useState('');
 
@@ -332,10 +336,14 @@ export function TxBuilder() {
     setBroadcastError(null);
 
     // Validar dirección del destinatario
-    const recipientScript = addressToScriptPubKey(recipientAddress.trim(), network);
+    const recipient = recipientAddress.trim();
+    const recipientScript = addressToScriptPubKey(recipient);
     if (!recipientScript) {
-      const prefix = network === 'mainnet' ? 'bc1' : 'tb1';
-      setUtxoError(`Dirección de destinatario inválida: debe ser bech32/bech32m de ${network} (empieza por ${prefix})`);
+      setUtxoError(
+        recipient.toLowerCase().startsWith('bc1')
+          ? 'Esa es una dirección de mainnet: esta wallet didáctica solo envía en testnet4/signet (tb1…)'
+          : `Dirección de destinatario inválida: debe ser bech32/bech32m de ${network} (empieza por tb1)`,
+      );
       return;
     }
 
@@ -343,8 +351,8 @@ export function TxBuilder() {
     const words = mnemonicInput.trim().split(/\s+/);
     const seed = mnemonicToSeed(words, passphrase);
     const master = masterKeyFromSeed(seed);
-    const changeCoinType = network === 'mainnet' ? 0 : 1;
-    const changePath = getDerivationPath(84, 0, true, changeIndex, changeCoinType); // change chain = true
+    // coin_type 1' (testnet/signet, SLIP-0044): el builder nunca opera en mainnet
+    const changePath = getDerivationPath(84, 0, true, changeIndex, 1); // change chain = true
     const { node: changeNode } = derivePath(master, changePath);
     // Para P2WPKH necesitamos el hash160 de la pubkey comprimida
     const changeNodeCompressed = compressPublicKey(changeNode.publicKey);
@@ -497,22 +505,7 @@ export function TxBuilder() {
   // ─── Broadcast (POST a mempool.space) ──────────────────
 
   const broadcastSignedTransaction = useCallback(async () => {
-    if (!signedTx || !builtTx || !signedFee) return;
-
-    // Aviso extra si es mainnet — aquí sí es dinero real. Mostramos lo que se
-    // va a firmar de verdad (no lo que hay ahora en los inputs del formulario).
-    if (network === 'mainnet') {
-      const ok = window.confirm(
-        'Estás a punto de emitir una transacción en MAINNET — los BTC son reales.\n\n' +
-        `Destino: ${builtTx.recipient}\n` +
-        `Importe: ${formatSats(signedFee.amount)}\n` +
-        `Fee:     ${formatSats(signedFee.fee)} (${signedFee.rate.toFixed(1)} sat/vB)\n` +
-        `Cambio:  ${formatSats(builtTx.changeAmount)}\n` +
-        (signedFee.warning ? `\n⚠️ ${signedFee.warning}\n` : '') +
-        '\n¿Seguro que quieres continuar?'
-      );
-      if (!ok) return;
-    }
+    if (!signedTx) return;
 
     setBroadcasting(true);
     setBroadcastError(null);
@@ -527,7 +520,7 @@ export function TxBuilder() {
     } finally {
       setBroadcasting(false);
     }
-  }, [signedTx, builtTx, signedFee, network]);
+  }, [signedTx, network]);
 
   // ─── Generar mnemónico de prueba ───────────────────────
 
@@ -553,16 +546,21 @@ export function TxBuilder() {
       <div className="txb-section">
         <span className="section-label">Red</span>
         <div className="network-selector">
-          {(['testnet4', 'signet', 'mainnet'] as Network[]).map(n => (
+          {BROADCAST_NETWORKS.map(n => (
             <button
               key={n}
-              className={`network-btn ${network === n ? 'active' : ''} ${n === 'mainnet' ? 'mainnet-btn' : ''}`}
+              className={`network-btn ${network === n ? 'active' : ''}`}
               onClick={() => { setNetwork(n); setWalletUtxos([]); setBuiltTx(null); setSignedTx(null); setBroadcastTxid(null); setBroadcastError(null); setSignError(null); }}
             >
-              {n === 'testnet4' ? 'Testnet4' : n === 'signet' ? 'Signet' : 'Mainnet'}
+              {n === 'testnet4' ? 'Testnet4' : 'Signet'}
             </button>
           ))}
         </div>
+        <p className="section-description">
+          Mainnet no está disponible a propósito: esto es una wallet didáctica y
+          nunca firma ni emite transacciones con BTC reales. Para consultar
+          mainnet en solo lectura usa el Balance Checker o la vista de transacción.
+        </p>
       </div>
 
       {/* Paso 1: Cargar wallet */}
@@ -686,7 +684,7 @@ export function TxBuilder() {
               type="text"
               value={recipientAddress}
               onChange={e => { setRecipientAddress(e.target.value); setBuiltTx(null); setSignedTx(null); setBroadcastTxid(null); setBroadcastError(null); setSignError(null); }}
-              placeholder={network === 'mainnet' ? 'bc1q...' : 'tb1q...'}
+              placeholder="tb1q..."
             />
           </div>
 
@@ -965,13 +963,6 @@ export function TxBuilder() {
             Si la tx es válida el nodo devuelve el <em>txid</em> y la propaga por
             la red. Si algo falla (firma inválida, fee insuficiente, etc.) devuelve
             un error descriptivo.
-            {network === 'mainnet' && (
-              <>
-                {' '}<strong style={{ color: '#f87171' }}>
-                  Estás en MAINNET: los BTC son reales.
-                </strong>
-              </>
-            )}
           </p>
 
           {signedFee && (
@@ -985,7 +976,7 @@ export function TxBuilder() {
           {signedFee?.warning && <div className="txb-warning">⚠️ {signedFee.warning}</div>}
 
           <button
-            className={`txb-btn primary build-btn ${network === 'mainnet' ? 'mainnet-btn' : ''}`}
+            className="txb-btn primary build-btn"
             onClick={broadcastSignedTransaction}
             disabled={broadcasting || broadcastTxid !== null}
           >
@@ -1012,7 +1003,7 @@ export function TxBuilder() {
               </code>
               <div style={{ marginTop: '0.5rem' }}>
                 <a
-                  href={`https://mempool.space/${network === 'mainnet' ? '' : network + '/'}tx/${broadcastTxid}`}
+                  href={`https://mempool.space/${network}/tx/${broadcastTxid}`}
                   target="_blank"
                   rel="noreferrer"
                   style={{ color: '#f7931a', textDecoration: 'underline' }}
